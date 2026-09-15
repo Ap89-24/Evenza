@@ -19,42 +19,53 @@ const FREE_ALLOWED_FORMATS = ["instagram_post", "linkedin_post", "whatsapp_messa
 function generateFallbackMarketing({ formatType, title, description, category, formattedDate, city, venue, ticketType, ticketPrice, remainingCapacity, capacity }) {
   const priceText = ticketType === "free" ? "FREE Entry" : `₹${ticketPrice}`;
   const locationText = `${city}${venue ? `, ${venue}` : ""}`;
-  const hashtags = `#${category.replace(/\s+/g, '')} #${city.replace(/\s+/g, '')} #EvenzaAI #LiveEvents #${title.replace(/[^a-zA-Z0-0]/g, '')}`;
+  const cleanCategory = category.replace(/[^a-zA-Z0-9]/g, '');
+  const cleanCity = city.replace(/[^a-zA-Z0-9]/g, '');
+  const cleanTitle = title.replace(/[^a-zA-Z0-9]/g, '');
+  const hashtags = `#${cleanCategory} #${cleanCity} #EvenzaAI #LiveEvents #${cleanTitle}`;
 
-  switch (formatType) {
-    case "instagram_post":
-      return `✨ EXCLUSIVE EVENT ANNOUNCEMENT ✨\n\nGet ready for "${title}" – an extraordinary ${category.toLowerCase()} event coming up in ${city}!\n\n💡 ABOUT THE EVENT:\n${description}\n\n📍 EVENT HIGHLIGHTS:\n📅 Date & Time: ${formattedDate}\n📍 Venue: ${locationText}\n🎟️ Ticket Price: ${priceText}\n🔥 Limited Seats: ${remainingCapacity} remaining out of ${capacity}\n\nDon't miss out on this incredible experience! Click the link in bio to reserve your official spot now. 👇\n\n${hashtags}`;
+  // Multi-variant templates so fallback is never static or identical
+  const templates = {
+    instagram_post: [
+      `✨ EXCLUSIVE EVENT ANNOUNCEMENT ✨\n\nGet ready for "${title}" – an extraordinary ${category.toLowerCase()} experience coming up in ${city}!\n\n💡 ABOUT THE EVENT:\n${description}\n\n📍 EVENT HIGHLIGHTS:\n📅 Date & Time: ${formattedDate}\n📍 Venue: ${locationText}\n🎟️ Ticket Price: ${priceText}\n🔥 Limited Seats: ${remainingCapacity} remaining out of ${capacity}\n\nDon't miss out on this incredible experience! Click the link in bio to reserve your official spot now. 👇\n\n${hashtags}`,
+      `🚀 BIG NEWS FOR ${city.toUpperCase()}! 🔥\n\n"${title}" is officially happening! Join us for an unforgettable ${category.toLowerCase()} gathering.\n\n🌟 WHY YOU SHOULD ATTEND:\n• ${description}\n\n📌 EVENT DETAILS:\n🗓️ ${formattedDate}\n📍 ${locationText}\n⚡ Entry: ${priceText}\n🎯 Availability: ${remainingCapacity} spots left!\n\nTag a friend who needs to be here with you! Link in bio to register 📲\n\n${hashtags}`,
+      `🎉 MARK YOUR CALENDARS: "${title}" is arriving soon! 🚨\n\n${description}\n\nKey Event Breakdown:\n🗓️ Date: ${formattedDate}\n📍 Location: ${locationText}\n🎟️ Pass: ${priceText}\n⚡ Remaining Seats: ${remainingCapacity}/${capacity}\n\nSecure your QR pass before tickets sell out! 🔗 Check bio link!\n\n${hashtags}`
+    ],
+    linkedin_post: [
+      `🚀 Announcing "${title}" – ${category} Experience in ${city}\n\nI am thrilled to host this event dedicated to ${category.toLowerCase()} enthusiasts and professionals.\n\n📖 Overview:\n${description}\n\n📌 Key Details:\n• Date & Time: ${formattedDate}\n• Location: ${locationText}\n• Category: ${category}\n• Admission: ${priceText}\n• Status: ${remainingCapacity} seats remaining (${capacity} max capacity)\n\nWhether you're looking to connect, learn, or experience something unique, this event offers immense value.\n\n👇 Register today to secure your pass:`,
+      `💡 Connecting Leaders & Professionals at "${title}" in ${city}\n\nWe are organizing a high-impact ${category.toLowerCase()} event aimed at fostering innovation and networking.\n\nSummary:\n📍 Location: ${locationText}\n📅 Date: ${formattedDate}\n🎟️ Access: ${priceText}\n\nKey Highlights:\n- ${description}\n- Exclusive networking with industry peers\n- Real-time digital check-in and QR ticket access\n\nSeats are limited to ${capacity} participants (${remainingCapacity} remaining). Reserve your pass here:`
+    ],
+    whatsapp_message: [
+      `👋 *Hi friends! You are warmly invited!* 🎉\n\nWe are hosting *${title}* in ${city}!\n\n✨ *About the Event:*\n${description}\n\n📅 *When:* ${formattedDate}\n📍 *Where:* ${locationText}\n🎟️ *Pass:* ${priceText}\n⚡ *Availability:* Only ${remainingCapacity} seats remaining!\n\n👉 *Claim your QR ticket here:* ${process.env.NEXT_PUBLIC_APP_URL || "https://evenza.app"}\n\nLooking forward to seeing you there! 🙌`,
+      `🔥 *Exclusive Invite: ${title}* 🔥\n\nHey! Don't miss out on this upcoming ${category.toLowerCase()} event in ${city}.\n\n📅 *Date:* ${formattedDate}\n📍 *Venue:* ${locationText}\n💰 *Ticket:* ${priceText}\n⏰ *Status:* ${remainingCapacity} seats left\n\nTap here to lock in your pass instantly: ${process.env.NEXT_PUBLIC_APP_URL || "https://evenza.app"}`
+    ],
+    instagram_caption: [
+      `Mark your calendars! 🗓️ "${title}" is officially happening in ${city}.\n\n"${description}"\n\n📅 ${formattedDate}\n📍 ${locationText}\n🎟️ ${priceText}\n\nLimited seats available (${remainingCapacity} left)! Tag your friends who should join you and grab your tickets via the link in our bio! 🔗✨\n\n${hashtags}`,
+      `Counting down the days until "${title}"! ⏳✨\n\n${description}\n\n📅 ${formattedDate}\n📍 ${locationText}\n🎟️ ${priceText}\n\nSpots are going fast (${remainingCapacity} remaining)! Hit the link in bio to register now. 🎟️💥\n\n${hashtags}`
+    ],
+    instagram_reel: [
+      `🎬 INSTAGRAM REEL SCRIPT: "${title}"\n\n[SCENE 1 - 0:00-0:03 | HOOK]\nVisual: Fast montage of ${city} skyline and event venue.\nAudio: "Are you ready for the biggest ${category.toLowerCase()} event in ${city}?"\n\n[SCENE 2 - 0:03-0:10 | VALUE]\nVisual: On-screen text displaying "${title}" with highlights.\nAudio: "${description}"\n\n[SCENE 3 - 0:10-0:15 | CALL TO ACTION]\nVisual: Presenter showing the event pass and pointing down to caption.\nAudio: "Seats are strictly capped at ${capacity} attendees. Tap the link in bio to grab your pass before it sells out!"`
+    ],
+    email_announcement: [
+      `Subject: You're Invited: ${title} in ${city} 🎟️\n\nDear Attendee,\n\nWe are delighted to announce our upcoming event, "${title}", taking place on ${formattedDate}.\n\nAbout the Event:\n${description}\n\nEvent Summary:\n• Venue: ${locationText}\n• Category: ${category}\n• Admission: ${priceText}\n• Capacity: ${capacity} seats (${remainingCapacity} remaining)\n\nReserve your pass today to receive your instant digital QR ticket.\n\nWarm regards,\nEvent Operations Team`
+    ],
+    event_reminder: [
+      `⏰ QUICK REMINDER: "${title}" is coming up soon!\n\nDon't forget to lock in your plans for ${formattedDate} at ${locationText}.\n\n${description}\n\n⚡ ${remainingCapacity} seats remain. Secure your spot now!`
+    ],
+    last_seats: [
+      `🔥 LAST CHANCE ALERT for "${title}"!\n\nWe are reaching maximum capacity! Only ${remainingCapacity} seats are left out of ${capacity}.\n\n📅 ${formattedDate}\n📍 ${locationText}\n🎟️ ${priceText}\n\nGrab your ticket now before registrations close! 🏃‍♂️💨`
+    ],
+    early_bird: [
+      `🏷️ EARLY ACCESS PASS: "${title}"\n\nBe among the first to secure your registration for ${title}!\n\n📅 Date: ${formattedDate}\n📍 Location: ${locationText}\n🎟️ Price: ${priceText}\n\n${description}\n\nLock in your pass early and join us for an unmissable experience!`
+    ],
+    thank_you: [
+      `🎉 THANK YOU for making "${title}" a resounding success!\n\nWe appreciate every attendee who registered and joined us in ${city}. Stay tuned for our next event!`
+    ]
+  };
 
-    case "linkedin_post":
-      return `🚀 Announcing "${title}" – ${category} Experience in ${city}\n\nI am thrilled to host this event dedicated to ${category.toLowerCase()} enthusiasts and professionals.\n\n📖 Overview:\n${description}\n\n📌 Key Details:\n• Date & Time: ${formattedDate}\n• Location: ${locationText}\n• Category: ${category}\n• Admission: ${priceText}\n• Status: ${remainingCapacity} seats remaining (${capacity} max capacity)\n\nWhether you're looking to connect, learn, or experience something unique, this event offers immense value.\n\n👇 Register today to secure your pass:`;
-
-    case "whatsapp_message":
-      return `👋 *Hi friends! You are warmly invited!* 🎉\n\nWe are hosting *${title}* in ${city}!\n\n✨ *About the Event:*\n${description}\n\n📅 *When:* ${formattedDate}\n📍 *Where:* ${locationText}\n🎟️ *Pass:* ${priceText}\n⚡ *Availability:* Only ${remainingCapacity} seats remaining!\n\n👉 *Claim your QR ticket here:* ${process.env.NEXT_PUBLIC_APP_URL || "https://evenza.app"}\n\nLooking forward to seeing you there! 🙌`;
-
-    case "instagram_caption":
-      return `Mark your calendars! 🗓️ "${title}" is officially happening in ${city}.\n\n"${description}"\n\n📅 ${formattedDate}\n📍 ${locationText}\n🎟️ ${priceText}\n\nLimited seats available (${remainingCapacity} left)! Tag your friends who should join you and grab your tickets via the link in our bio! 🔗✨\n\n${hashtags}`;
-
-    case "instagram_reel":
-      return `🎬 INSTAGRAM REEL SCRIPT: "${title}"\n\n[SCENE 1 - 0:00-0:03 | HOOK]\nVisual: Fast montage of ${city} skyline and event venue.\nAudio: "Are you ready for the biggest ${category.toLowerCase()} event in ${city}?"\n\n[SCENE 2 - 0:03-0:10 | VALUE]\nVisual: On-screen text displaying "${title}" with highlights.\nAudio: "${description}"\n\n[SCENE 3 - 0:10-0:15 | CALL TO ACTION]\nVisual: Presenter showing the event pass and pointing down to caption.\nAudio: "Seats are strictly capped at ${capacity} attendees. Tap the link in bio to grab your pass before it sells out!"`;
-
-    case "email_announcement":
-      return `Subject: You're Invited: ${title} in ${city} 🎟️\n\nDear Attendee,\n\nWe are delighted to announce our upcoming event, "${title}", taking place on ${formattedDate}.\n\nAbout the Event:\n${description}\n\nEvent Summary:\n• Venue: ${locationText}\n• Category: ${category}\n• Admission: ${priceText}\n• Capacity: ${capacity} seats (${remainingCapacity} remaining)\n\nReserve your pass today to receive your instant digital QR ticket.\n\nWarm regards,\nEvent Operations Team`;
-
-    case "event_reminder":
-      return `⏰ QUICK REMINDER: "${title}" is coming up soon!\n\nDon't forget to lock in your plans for ${formattedDate} at ${locationText}.\n\n${description}\n\n⚡ ${remainingCapacity} seats remain. Secure your spot now!`;
-
-    case "last_seats":
-      return `🔥 LAST CHANCE ALERT for "${title}"!\n\nWe are reaching maximum capacity! Only ${remainingCapacity} seats are left out of ${capacity}.\n\n📅 ${formattedDate}\n📍 ${locationText}\n🎟️ ${priceText}\n\nGrab your ticket now before registrations close! 🏃‍♂️💨`;
-
-    case "early_bird":
-      return `🏷️ EARLY ACCESS PASS: "${title}"\n\nBe among the first to secure your registration for ${title}!\n\n📅 Date: ${formattedDate}\n📍 Location: ${locationText}\n🎟️ Price: ${priceText}\n\n${description}\n\nLock in your pass early and join us for an unmissable experience!`;
-
-    case "thank_you":
-      return `🎉 THANK YOU for making "${title}" a resounding success!\n\nWe appreciate every attendee who registered and joined us in ${city}. Stay tuned for our next event!`;
-
-    default:
-      return `🎉 "${title}"\n📅 ${formattedDate}\n📍 ${locationText}\n${description}`;
-  }
+  const list = templates[formatType] || [`🎉 "${title}"\n📅 ${formattedDate}\n📍 ${locationText}\n${description}`];
+  const selectedIndex = Math.floor(Math.random() * list.length);
+  return list[selectedIndex];
 }
 
 export async function POST(req) {
@@ -106,12 +117,12 @@ export async function POST(req) {
 
     const remainingCapacity = Math.max(0, (capacity || 50) - (registrationCount || 0));
 
-    const systemPrompt = `You are a world-class AI Event Marketer.
-Generate high-converting marketing copy for an event in the requested format.
+    const systemPrompt = `You are an elite, world-class AI Event Marketing Strategist & Viral Copywriter.
+Your goal is to generate high-converting, attention-grabbing, and market-engaging promotional copy for an event in the requested format.
 
 REQUESTED FORMAT: ${MARKETING_FORMATS[formatType]}
 
-STRICT EVENT DATA (DO NOT FABRICATE DATA):
+STRICT REAL EVENT DATA:
 - Event Title: "${title}"
 - Category: ${category}
 - Description: ${description}
@@ -120,14 +131,20 @@ STRICT EVENT DATA (DO NOT FABRICATE DATA):
 - Price: ${ticketType === "free" ? "Free Registration" : `₹${ticketPrice}`}
 - Remaining Seats: ${remainingCapacity} of ${capacity}
 
-RULES:
-1. Include actual event details (Title, Date, Venue, Price) naturally.
-2. DO NOT invent fake speakers, dates, or prices.
-3. Make the copy engaging, high-converting, and tailored to the platform.
-4. Include appropriate emojis and hashtags.
-5. Return ONLY the copy text directly, without meta-introductions like "Here is your post:".`;
+VIRAL COPYWRITING RULES:
+1. ATTENTION-GRABBING HOOK: Hook the reader immediately with an exciting, viral opening line or headline.
+2. RICH FORMATTING: Use structured Markdown headers, bullet points, clean line breaks, and highlighted key info.
+3. HIGH-IMPACT EMOJIS: Use vivid, high-converting emojis (✨, 🎟️, 🚀, 📍, 🔥, 📅, 🎬, 💡, 🏷️, 🎉, ⚡) naturally to drive visual engagement.
+4. MARKET-ENGAGING CTA & URGENCY: Drive action by highlighting limited capacity (${remainingCapacity} seats left) and clear Call-To-Action (CTA).
+5. NO META-INTRODUCTIONS: Return ONLY the ready-to-publish copy directly without any intro phrases like "Here is your post:".`;
 
-    const { text: generatedText } = await generateTextWithAI({ systemPrompt });
+    const userPrompt = `Generate a fresh, unique, high-energy, and distinct marketing post for "${title}". Make sure this version has a creative new hook, high-converting copy structure, and engaging emojis. [Variation Ref: ${Date.now()}_${Math.random()}]`;
+
+    const { text: generatedText } = await generateTextWithAI({ 
+      systemPrompt, 
+      userPrompt, 
+      temperature: 0.9 
+    });
 
     if (generatedText) {
       return NextResponse.json({ content: generatedText });

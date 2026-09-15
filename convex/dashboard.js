@@ -15,8 +15,14 @@ export const getEventDashboard = query({
       return null;
     }
 
-    //* Check if the user is the organizer of the event...
-    if (event.organizerId.toString() !== user._id.toString()) {
+    //* Check if the user is the organizer or authorized team member of the event...
+    const organizer = await ctx.db.get(event.organizerId);
+    const isOwner = event.organizerId.toString() === user._id.toString();
+    const isTeamMember = organizer?.teamMembers?.some(
+      (m) => m.email.toLowerCase() === user.email.toLowerCase()
+    );
+
+    if (!isOwner && !isTeamMember) {
       return null;
     }
 

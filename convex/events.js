@@ -145,18 +145,37 @@ export const getEventBySlug = query({
 })
 
 
-//Get events by organizer...
+//Get events by organizer or team membership...
 export const getEventsByOrg = query({
     handler: async(ctx) => {
         const user = await ctx.runQuery(internal.users.getCurrentUser);
+        if (!user) return [];
 
-        const events = await ctx.db
+        const ownedEvents = await ctx.db
             .query("events")
             .withIndex("by_organizer" , (q) => q.eq("organizerId" , user._id))
             .order("desc")
             .collect();
 
-        return events;    
+        const ownedWithRole = ownedEvents.map(e => ({ ...e, role: "owner", isTeamEvent: false }));
+
+        // Check for events where user is an authorized team member
+        const allEvents = await ctx.db.query("events").order("desc").collect();
+        const teamEvents = [];
+
+        for (const e of allEvents) {
+            if (e.organizerId.toString() !== user._id.toString()) {
+                const organizer = await ctx.db.get(e.organizerId);
+                const isMember = organizer?.teamMembers?.some(
+                    (m) => m.email.toLowerCase() === user.email.toLowerCase()
+                );
+                if (isMember) {
+                    teamEvents.push({ ...e, role: "team_member", isTeamEvent: true });
+                }
+            }
+        }
+
+        return [...ownedWithRole, ...teamEvents];    
     }
 })
 
@@ -172,9 +191,15 @@ export const deleteEvent = mutation({
         throw new Error("Event not found🚫🚫🚫🚫")
        }
 
-       //Check if user is the organizer...
-       if(event.organizerId !== user._id){
-        throw new Error("🔒 Only the event organizer can delete this event.")
+       const organizer = await ctx.db.get(event.organizerId);
+       const isOwner = event.organizerId.toString() === user._id.toString();
+       const isTeamMember = organizer?.teamMembers?.some(
+           (m) => m.email.toLowerCase() === user.email.toLowerCase()
+       );
+
+       //Check if user is the organizer or team member...
+       if(!isOwner && !isTeamMember){
+        throw new Error("🔒 Only the event organizer or authorized team members can delete this event.")
        }
 
        //Delete all registration for this event...
@@ -190,8 +215,8 @@ export const deleteEvent = mutation({
         //Delete an event...
         await ctx.db.delete(args.eventId);
 
-        //For Pro members subscrption...
-        if(user.freeEventsCreated > 0){
+        //For Pro members subscription...
+        if(isOwner && user.freeEventsCreated > 0){
             await ctx.db.patch(user._id , {
                 freeEventsCreated: user.freeEventsCreated - 1,
             });

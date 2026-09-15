@@ -81,7 +81,12 @@ const EventCard = ({
                             {getCategoryIcon(event.category)}
                          </div>
                         )}
-                        <div className='absolute top-3 right-3'>
+                        <div className='absolute top-3 right-3 flex items-center gap-1.5'>
+                          {event.isTeamEvent && (
+                            <Badge className="bg-purple-950/90 text-purple-300 border-purple-700/60 text-[10px] gap-1 shadow-md font-semibold">
+                              <Users className="w-3 h-3 text-purple-400" /> Team Shared
+                            </Badge>
+                          )}
                           <Badge variant="secondary">
                             {event.ticketType === "free" ? "Free" : "Paid"}
                           </Badge>

@@ -13,7 +13,8 @@ import Autoplay from "embla-carousel-autoplay";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Calendar, Loader, Loader2, MapPin, Users } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Calendar, History, Loader, Loader2, MapPin, Users } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { createLocationSlug } from "@/lib/location-util";
@@ -306,6 +307,23 @@ const ExplorePage = () => {
           </div>
         </div>
       )}
+      {/* Banner linking to Past Events Archive */}
+      <div className="mb-16 p-6 sm:p-8 rounded-2xl border border-zinc-800 bg-gradient-to-r from-zinc-900 via-zinc-950 to-purple-950/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-base font-bold text-white">
+            <History className="w-5 h-5 text-purple-400" /> Looking for finished events?
+          </div>
+          <p className="text-xs sm:text-sm text-gray-400">
+            Check out completed experiences, host details, and summaries in our Past Events Archive.
+          </p>
+        </div>
+        <Button asChild variant="outline" className="border-purple-500/40 text-purple-300 hover:bg-purple-950/40 text-xs sm:text-sm gap-2 shrink-0">
+          <Link href="/past-events">
+            Browse Past Events Archive <ArrowRight className="w-4 h-4" />
+          </Link>
+        </Button>
+      </div>
+
       {/* Empty state for no events */}
 
       {!loadingFeatured &&

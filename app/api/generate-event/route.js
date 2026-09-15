@@ -41,7 +41,7 @@ Rules:
   - large events: 150-500
 `;
 
-    const { text } = await generateTextWithAI({ systemPrompt });
+    const { text } = await generateTextWithAI({ systemPrompt, userPrompt: prompt, temperature: 0.8 });
     console.log("🧠 AI RAW RESPONSE:", text);
     if (!text) {
       throw new Error("Empty response from AI engine");

@@ -15,11 +15,13 @@ export const searchEvents = query({
         }
 
         const now = Date.now();
-        const searchResult = await ctx.db.query("events").withSearchIndex("search_tittle" , (q) => q.search("title", args.query))
-        .filter((q) => q.gte(q.field("startDate") , now))
-        .take(args.limit ?? 5);
+        const searchResult = await ctx.db.query("events")
+            .withSearchIndex("search_tittle" , (q) => q.search("title", args.query))
+            .collect();
 
-        return searchResult;
+        // Filter upcoming events (endDate or startDate >= now)
+        const upcoming = searchResult.filter((e) => (e.endDate || e.startDate) >= now);
 
+        return upcoming.slice(0, args.limit ?? 5);
     }
 })

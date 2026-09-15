@@ -280,55 +280,6 @@ export default function BillingPage() {
           </CardContent>
         </Card>
 
-        {/* Custom Domain Settings Section */}
-        <Card className="border-zinc-800">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="w-5 h-5 text-purple-400" /> Custom Domain Configuration
-            </CardTitle>
-            <CardDescription>
-              Connect your own domain to host custom event pages.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isPro ? (
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Input
-                    placeholder="events.yourdomain.com"
-                    value={customDomainInput}
-                    onChange={(e) => setCustomDomainInput(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={() => {
-                      if (!customDomainInput) {
-                        toast.error("Please enter a domain");
-                        return;
-                      }
-                      toast.success("Domain configuration saved! Add the CNAME record below to complete setup.");
-                    }}
-                  >
-                    Connect Domain
-                  </Button>
-                </div>
-                <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2 text-xs text-gray-300">
-                  <p className="font-semibold text-white">DNS Configuration Instructions:</p>
-                  <p>1. Log in to your DNS provider (Cloudflare, GoDaddy, Namecheap).</p>
-                  <p>2. Add a <code className="text-purple-400">CNAME</code> record pointing your subdomain to <code className="text-purple-400">events.evenza.app</code>.</p>
-                  <p>3. Allow up to 24 hours for DNS propagation.</p>
-                </div>
-              </div>
-            ) : (
-              <ProFeatureLock
-                title="Custom Domain Configuration"
-                description="Use your own custom domain for event landing pages with Pro."
-                onUpgrade={() => setShowUpgradeModal(true)}
-                compact
-              />
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       <UpgradeModal

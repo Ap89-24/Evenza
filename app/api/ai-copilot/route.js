@@ -120,7 +120,11 @@ INSTRUCTIONS:
 3. If asked for social posts or messages (Instagram, LinkedIn, WhatsApp, email), format them ready to copy with relevant hashtags.
 4. Format with clean markdown headers and bullet points.`;
 
-    const { text: responseText } = await generateTextWithAI({ systemPrompt });
+    const { text: responseText } = await generateTextWithAI({ 
+      systemPrompt, 
+      userPrompt: `Please answer the organizer's question thoughtfully: "${prompt}" [Ref: ${Date.now()}_${Math.random()}]`, 
+      temperature: 0.85 
+    });
 
     if (responseText) {
       return NextResponse.json({ answer: responseText });

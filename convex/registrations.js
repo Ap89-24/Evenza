@@ -205,10 +205,16 @@ export const checkInAttendee = mutation({
             throw new Error("Event not found...");
            };
 
-           //* Check if the user is the organizer of the event...
-          if (event.organizerId !== user._id) {
-               throw new Error("You are not authorized to check in attendees.");
-         };
+           //* Check if the user is the organizer or authorized team member of the event...
+           const organizer = await ctx.db.get(event.organizerId);
+           const isOwner = event.organizerId.toString() === user._id.toString();
+           const isTeamMember = organizer?.teamMembers?.some(
+               (m) => m.email.toLowerCase() === user.email.toLowerCase()
+           );
+
+           if (!isOwner && !isTeamMember) {
+                throw new Error("You are not authorized to check in attendees for this event.");
+           };
          
          if(registration.checkedIn){
             return {
@@ -246,8 +252,14 @@ export const getEventRegistrations = query({
             return [];
         }
 
-        //* Check if the user is the organizer of the event...
-        if (event.organizerId !== user._id) {
+        //* Check if the user is the organizer or authorized team member of the event...
+        const organizer = await ctx.db.get(event.organizerId);
+        const isOwner = event.organizerId.toString() === user._id.toString();
+        const isTeamMember = organizer?.teamMembers?.some(
+            (m) => m.email.toLowerCase() === user.email.toLowerCase()
+        );
+
+        if (!isOwner && !isTeamMember) {
             return [];
         }
 
