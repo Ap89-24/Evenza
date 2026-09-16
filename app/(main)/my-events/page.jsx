@@ -116,7 +116,7 @@ const MyEventPage = () => {
               onClick={() => setShowUpgradeModal(true)}
               className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xs gap-1 shrink-0 w-full sm:w-auto"
             >
-              <Sparkles className="w-3.5 h-3.5" /> Upgrade to Pro — ₹399/mo
+              <Sparkles className="w-3.5 h-3.5" /> Upgrade to Pro — ₹1999/mo
             </Button>
           </div>
         )}

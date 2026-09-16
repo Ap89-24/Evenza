@@ -64,7 +64,7 @@ export const ProFeatureLock = ({
             onClick={onUpgrade}
             className="w-full sm:w-auto px-8 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white font-semibold rounded-xl shadow-lg shadow-purple-500/25 transition-all duration-300 hover:scale-[1.02]"
           >
-            <Sparkles className="w-5 h-5 mr-2" /> Upgrade to Pro — ₹399/mo
+            <Sparkles className="w-5 h-5 mr-2" /> Upgrade to Pro — ₹1999/mo
           </Button>
         </div>
       </CardContent>

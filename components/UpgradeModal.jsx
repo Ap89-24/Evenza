@@ -144,7 +144,7 @@ const UpgradeModal = ({ isOpen, onClose, trigger = "limit" }) => {
                 </h3>
               </div>
               <div>
-                <span className="text-4xl font-extrabold text-white">₹399</span>
+                <span className="text-4xl font-extrabold text-white">₹1999</span>
                 <span className="text-purple-300 text-sm"> / month</span>
               </div>
               <ul className="space-y-2.5 text-xs text-gray-200">
@@ -199,7 +199,7 @@ const UpgradeModal = ({ isOpen, onClose, trigger = "limit" }) => {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-5 h-5 mr-2" /> Upgrade to Pro — ₹399/mo
+                    <Sparkles className="w-5 h-5 mr-2" /> Upgrade to Pro — ₹1999/mo
                   </>
                 )}
               </Button>

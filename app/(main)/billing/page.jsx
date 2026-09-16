@@ -112,7 +112,7 @@ export default function BillingPage() {
                 </span>
               </div>
               <h2 className="text-3xl font-extrabold text-white">
-                {isPro ? "₹399 / month" : "₹0 / month"}
+                {isPro ? "₹1999 / month" : "₹0 / month"}
               </h2>
               <p className="text-sm text-gray-400">
                 {isPro
@@ -127,7 +127,7 @@ export default function BillingPage() {
                   onClick={() => setShowUpgradeModal(true)}
                   className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white font-bold py-6 px-8 rounded-xl shadow-lg shadow-purple-500/25"
                 >
-                  <Sparkles className="w-5 h-5 mr-2" /> Upgrade to Pro — ₹399/mo
+                  <Sparkles className="w-5 h-5 mr-2" /> Upgrade to Pro — ₹1999/mo
                 </Button>
               ) : (
                 <Button
@@ -154,7 +154,7 @@ export default function BillingPage() {
                 <tr className="border-b border-zinc-800 text-gray-400">
                   <th className="pb-3 font-semibold">Feature</th>
                   <th className="pb-3 font-semibold">Free (₹0)</th>
-                  <th className="pb-3 font-semibold text-purple-400">Pro (₹399/mo)</th>
+                  <th className="pb-3 font-semibold text-purple-400">Pro (₹1999/mo)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/50">
