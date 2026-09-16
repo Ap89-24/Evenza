@@ -1,4 +1,6 @@
 
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import Header from "@/components/Header";
 import BrandSymbol from "@/components/BrandSymbol";
 import AppSplashLoader from "@/components/AppSplashLoader";
@@ -56,8 +58,17 @@ export default function RootLayout({ children }) {
                   <div className="flex items-center gap-3">
                     <BrandSymbol />
                   </div>
-                  <div className="relative z-10 text-xs sm:text-sm text-gray-400">
-                    All Rights Reserved &copy; Evenza 2026 • AI-Powered Event Management Platform
+                  <div className="relative z-10 flex flex-col sm:flex-row items-center gap-3 text-xs sm:text-sm text-gray-400 text-center sm:text-left">
+                    <span>All Rights Reserved &copy; Evenza 2026 • AI-Powered Event Management Platform</span>
+                    <span className="hidden sm:inline text-gray-700">•</span>
+                    <Link
+                      href="/developer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-purple-500/30 bg-purple-950/40 text-purple-300 hover:text-white hover:bg-purple-900/60 hover:border-purple-400 transition-all font-medium text-xs shadow-xs"
+                    >
+                      <Sparkles className="w-3 h-3 text-purple-400" />
+                      <span>Know about Evenza Developer</span>
+                      <span className="text-purple-400 font-bold">→</span>
+                    </Link>
                   </div>
                 </footer>
                 <Toaster richColors />
