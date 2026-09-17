@@ -8,7 +8,6 @@ import gsap from "gsap";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Sparkles,
   QrCode,
   MapPin,
   Calendar,
@@ -23,6 +22,7 @@ import {
   Crown,
   CheckCircle2,
   History,
+  Sparkles,
 } from "lucide-react";
 
 export default function Home() {
@@ -97,11 +97,6 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 items-center relative z-10">
           {/* Left Text Column */}
           <div className="text-center sm:text-left space-y-6">
-            <div className="hero-tag inline-flex items-center gap-2 bg-purple-950/60 border border-purple-800/60 px-3.5 py-1.5 rounded-full text-xs font-semibold text-purple-300 backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Next-Gen AI Powered Event Platform</span>
-            </div>
-
             <h1 className="hero-title text-4xl sm:text-6xl md:text-7xl font-extrabold leading-[1.15] tracking-tight text-slate-100">
               Discover & <br />
               Create Amazing <br />
