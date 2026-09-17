@@ -1,15 +1,54 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { generateTextWithAI } from "@/lib/ai-provider";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getCached, setCached, generateHash } from "@/lib/cache";
+import { getUserPlanServer } from "@/lib/user-subscription";
 
 export async function POST(req) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const { prompt } = await req.json();
 
-    if (!prompt) {
+    if (!prompt || !prompt.trim()) {
       return NextResponse.json(
         { error: "Prompt is required" },
-        { status: 400 },
+        { status: 400 }
       );
+    }
+
+    // 1. Determine user subscription plan from Convex backend
+    const userPlan = await getUserPlanServer(userId);
+    const isPro = userPlan === "pro";
+
+    // 2. Enforce Redis Rate Limiting
+    const rateLimit = await checkRateLimit(userId, isPro);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "AI usage limit reached. Please try again later.",
+        },
+        { status: 429 }
+      );
+    }
+
+    // 3. Normalize input & generate Redis Cache Key (isolated by userId for privacy)
+    const normalizedPrompt = prompt.trim().toLowerCase();
+    const promptHash = generateHash(normalizedPrompt);
+    const cacheKey = `ai:user:${userId}:${promptHash}`;
+
+    // 4. Check Redis cache
+    const cachedResponse = await getCached(cacheKey);
+    if (cachedResponse) {
+      return NextResponse.json(cachedResponse);
     }
 
     const systemPrompt = `You are an event planning assistant. Generate event details based on the user's description.
@@ -47,17 +86,13 @@ Rules:
       throw new Error("Empty response from AI engine");
     }
 
-    // Clean the response (remove markdown code blocks if present)
-    // 🔥 Improved JSON cleaning + parsing
     let cleanedText = text.trim();
 
-    // Remove markdown (anywhere in response)
     cleanedText = cleanedText
       .replace(/```json/g, "")
       .replace(/```/g, "")
       .trim();
 
-    // Extract only JSON part
     const firstBrace = cleanedText.indexOf("{");
     const lastBrace = cleanedText.lastIndexOf("}");
 
@@ -66,14 +101,17 @@ Rules:
     }
 
     const jsonString = cleanedText.slice(firstBrace, lastBrace + 1);
-
     const eventData = JSON.parse(jsonString);
+
+    // 5. Store generated response in Redis cache (TTL: 10 minutes = 600s)
+    await setCached(cacheKey, eventData, 600);
+
     return NextResponse.json(eventData);
   } catch (error) {
     console.error("Error in generating event: ", error);
     return NextResponse.json(
-      { error: "Failed to generate event" + error.message },
-      { status: 500 },
+      { error: "Failed to generate event: " + error.message },
+      { status: 500 }
     );
   }
 }

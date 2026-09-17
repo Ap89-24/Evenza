@@ -276,3 +276,16 @@ export const getOrganizerFollowersCount = query({
     return followers.length;
   },
 });
+
+// Fetch user profile by Clerk User ID (for server-side rate-limiting and plan verification)
+export const getUserByClerkId = query({
+  args: { clerkUserId: v.string() },
+  handler: async (ctx, args) => {
+    if (!args.clerkUserId) return null;
+    const users = await ctx.db.query("users").collect();
+    const user = users.find(
+      (u) => u.tokenIdentifier.endsWith(args.clerkUserId) || u.tokenIdentifier === args.clerkUserId
+    );
+    return user || null;
+  },
+});

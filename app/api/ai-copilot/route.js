@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { generateTextWithAI } from "@/lib/ai-provider";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getCached, setCached, generateHash } from "@/lib/cache";
+import { getUserPlanServer } from "@/lib/user-subscription";
 
 function generateFallbackCopilotAnswer(prompt, context) {
   const lower = prompt.toLowerCase();
@@ -18,7 +22,7 @@ function generateFallbackCopilotAnswer(prompt, context) {
   } = context;
 
   const remaining = Math.max(0, capacity - totalRegistrations);
-  const conversionPct = Math.round((totalRegistrations / capacity) * 100);
+  const conversionPct = capacity > 0 ? Math.round((totalRegistrations / capacity) * 100) : 0;
 
   if (lower.includes("registered") || lower.includes("registration")) {
     return `📊 **Registration Overview for "${title}"**\n\n• **Total Registrations:** ${totalRegistrations} of ${capacity} capacity (${conversionPct}% full)\n• **Remaining Seats:** ${remaining} seats available\n\n💡 *Tip:* Share your event link on WhatsApp and LinkedIn to quickly fill the remaining ${remaining} seats!`;
@@ -49,9 +53,17 @@ function generateFallbackCopilotAnswer(prompt, context) {
 
 export async function POST(req) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const { prompt, eventContext } = await req.json();
 
-    if (!prompt) {
+    if (!prompt || !prompt.trim()) {
       return NextResponse.json(
         { error: "Prompt is required" },
         { status: 400 }
@@ -65,25 +77,60 @@ export async function POST(req) {
       );
     }
 
+    // 1. Server-side Pro entitlement check from Convex DB
+    const userPlan = await getUserPlanServer(userId);
+    const isPro = userPlan === "pro";
+
+    if (!isPro) {
+      return NextResponse.json(
+        { error: "AI Event Copilot is exclusive to Pro users." },
+        { status: 403 }
+      );
+    }
+
+    // 2. Redis Rate Limiting check
+    const rateLimit = await checkRateLimit(userId, isPro);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "AI usage limit reached. Please try again later.",
+        },
+        { status: 429 }
+      );
+    }
+
     const {
+      _id: eventId,
       title,
       category,
       startDate,
       endDate,
       city,
       venue,
-      capacity,
+      capacity = 50,
       ticketType,
       ticketPrice,
-      totalRegistrations,
-      checkedInCount,
-      pendingCount,
-      totalRevenue,
-      checkedInRate,
-      hoursUntilEvent,
+      totalRegistrations = 0,
+      checkedInCount = 0,
+      pendingCount = 0,
+      totalRevenue = 0,
+      checkedInRate = 0,
+      hoursUntilEvent = 24,
       isEventToday,
       isEventPast,
     } = eventContext;
+
+    // 3. Normalize & Hash for Redis Cache Key (Isolated for User + Event Privacy)
+    const contextStr = `${prompt.trim().toLowerCase()}|${eventId || title}|${totalRegistrations}|${checkedInCount}|${totalRevenue}`;
+    const hash = generateHash(contextStr);
+    const cacheKey = `ai:event:${userId}:${eventId || "copilot"}:${hash}`;
+
+    // 4. Check Redis Cache (10-minute TTL)
+    const cachedAnswer = await getCached(cacheKey);
+    if (cachedAnswer) {
+      return NextResponse.json(cachedAnswer);
+    }
 
     const formattedStartDate = startDate ? new Date(startDate).toLocaleString() : "TBD";
     const formattedEndDate = endDate ? new Date(endDate).toLocaleString() : "TBD";
@@ -126,12 +173,17 @@ INSTRUCTIONS:
       temperature: 0.85 
     });
 
-    if (responseText) {
-      return NextResponse.json({ answer: responseText });
+    let finalAnswer = responseText;
+    if (!finalAnswer) {
+      finalAnswer = generateFallbackCopilotAnswer(prompt, eventContext);
     }
 
-    const fallbackAnswer = generateFallbackCopilotAnswer(prompt, eventContext);
-    return NextResponse.json({ answer: fallbackAnswer });
+    const responsePayload = { answer: finalAnswer };
+
+    // 5. Cache response in Redis (10-minute TTL = 600s)
+    await setCached(cacheKey, responsePayload, 600);
+
+    return NextResponse.json(responsePayload);
   } catch (error) {
     console.error("AI Copilot Error:", error);
     return NextResponse.json(
