@@ -92,7 +92,7 @@ export default function Home() {
       {/* HERO SECTION */}
       <section ref={heroRef} className="pt-4 pb-12 sm:pb-16 relative overflow-hidden">
         {/* Glow backlight */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-purple-600/15 blur-[140px] rounded-full pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-full sm:w-[600px] h-[300px] sm:h-[400px] bg-purple-600/15 blur-[100px] sm:blur-[140px] rounded-full pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 items-center relative z-10">
           {/* Left Text Column */}
@@ -369,7 +369,7 @@ export default function Home() {
       {/* FINAL CALL TO ACTION (CTA) BANNER */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative p-8 sm:p-14 rounded-3xl border border-purple-500/30 bg-gradient-to-r from-purple-950 via-zinc-950 to-indigo-950 text-center space-y-6 overflow-hidden shadow-2xl">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-purple-500/15 blur-[120px] rounded-full pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-full sm:w-[500px] h-[250px] sm:h-[300px] bg-purple-500/15 blur-[100px] sm:blur-[120px] rounded-full pointer-events-none" />
 
           <div className="relative z-10 space-y-4 max-w-2xl mx-auto">
             <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">

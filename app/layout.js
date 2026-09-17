@@ -20,10 +20,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="overflow-x-hidden max-w-full" suppressHydrationWarning>
       <body
         suppressHydrationWarning
-        className={`bg-linear-to-br from-gray-950 via-zinc-900 to-stone-900 text-white`}
+        className={`bg-linear-to-br from-gray-950 via-zinc-900 to-stone-900 text-white overflow-x-hidden max-w-full min-h-screen relative`}
       >
         <AppSplashLoader />
         <ThemeProvider
@@ -42,14 +42,14 @@ export default function RootLayout({ children }) {
                 <Header />
 
                 <AdvancedPageTransition>
-                  <main className="relative min-h-screen container mx-auto pt-40 md:pt-32">
+                  <main className="relative min-h-screen container mx-auto pt-40 md:pt-32 max-w-full overflow-x-hidden px-3 sm:px-6">
                     {/* {glow} */}
-                    <div className="pointer-events-none">
+                    <div className="pointer-events-none overflow-hidden max-w-full">
                       <div className="absolute top-1.5 left-1/4 h-80 w-80 bg-pink-600/40 rounded-full blur-3xl"></div>
                       <div className="absolute bottom-1.5 right-1/4 h-80 w-80 bg-stone-200/30 rounded-full blur-3xl"></div>
                     </div>
 
-                    <div className="relative z-10 min-h-[70vh]">{children}</div>
+                    <div className="relative z-10 min-h-[70vh] max-w-full overflow-x-hidden">{children}</div>
 
                     {/* {footer} */}
                     <footer className="border-t border-gray-800/80 max-w-7xl py-8 px-6 mx-auto flex flex-col md:flex-row items-center justify-between gap-4 overflow-hidden">

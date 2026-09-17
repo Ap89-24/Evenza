@@ -161,7 +161,7 @@ const EventPage = () => {
       
       {/* High-Impact Ambient Theme Lighting Backlight */}
       <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[750px] sm:w-[1200px] h-[450px] sm:h-[650px] blur-[120px] sm:blur-[160px] rounded-full pointer-events-none -z-10 opacity-70 transition-all duration-700"
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-full sm:w-[1200px] h-[350px] sm:h-[650px] blur-[100px] sm:blur-[160px] rounded-full pointer-events-none -z-10 opacity-70 transition-all duration-700"
         style={themeStyle}
       />
 

@@ -28,13 +28,13 @@ const Header = () => {
 
   return (
     <>
-      <nav className='fixed top-0 left-0 right-0 bg-background/90 backdrop-blur-3xl z-30 border-b'>
-        <div className='max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-2'>
+      <nav className='fixed top-0 left-0 right-0 bg-background/90 backdrop-blur-3xl z-30 border-b max-w-full overflow-x-hidden'>
+        <div className='max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 min-w-0 max-w-full'>
           {/* Brand Symbol & Logo */}
           <BrandSymbol hasPro={hasPro} />
 
           {/* Search bar and location for desktop */}
-          <div className="hidden md:flex flex-1 justify-center px-4 max-w-2xl">
+          <div className="hidden md:flex flex-1 justify-center px-4 max-w-2xl min-w-0">
             <SearchLocationBar />
           </div>
 

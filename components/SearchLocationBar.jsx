@@ -101,8 +101,8 @@ const SearchLocationBar = () => {
   }
 
   return (
-    <div className="flex items-center">
-      <div className="relative flex w-full" ref={searchRef}>
+    <div className="flex items-center w-full max-w-full min-w-0">
+      <div className="relative flex flex-1 min-w-0" ref={searchRef}>
         <div className="flex-1 min-w-0">
           <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
           <Input
@@ -111,7 +111,7 @@ const SearchLocationBar = () => {
               if (searchQuery.length >= 2) setShowSearchResult(true);
             }}
             onChange={handleSearchInput}
-            className="pl-8 sm:pl-10 w-full h-8 sm:h-9 text-xs sm:text-sm rounded-none rounded-l-md truncate"
+            className="pl-8 sm:pl-10 w-full h-8 sm:h-9 text-xs sm:text-sm rounded-none rounded-l-md truncate min-w-0"
           />
         </div>
 
@@ -175,7 +175,7 @@ const SearchLocationBar = () => {
           setSelectedCities("");
         }}
       >
-        <SelectTrigger id="state" className="w-20 sm:w-32 h-8 sm:h-9 text-[11px] sm:text-xs border-l-0 rounded-none px-1.5 sm:px-3">
+        <SelectTrigger id="state" className="w-16 sm:w-32 h-8 sm:h-9 text-[10px] sm:text-xs border-l-0 rounded-none px-1 sm:px-3 shrink-0">
           <SelectValue placeholder="State" className="truncate" />
         </SelectTrigger>
         <SelectContent>
@@ -197,7 +197,7 @@ const SearchLocationBar = () => {
         }}
         disabled={!selectedStates}
       >
-        <SelectTrigger id="city" className="w-20 sm:w-32 h-8 sm:h-9 text-[11px] sm:text-xs rounded-none rounded-r-md px-1.5 sm:px-3">
+        <SelectTrigger id="city" className="w-16 sm:w-32 h-8 sm:h-9 text-[10px] sm:text-xs rounded-none rounded-r-md px-1 sm:px-3 shrink-0">
           <SelectValue placeholder="City" className="truncate" />
         </SelectTrigger>
         <SelectContent>
