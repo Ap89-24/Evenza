@@ -27,6 +27,7 @@ import {
 
 export default function Home() {
   const heroRef = useRef(null);
+  const cardRef = useRef(null);
 
   useEffect(() => {
     if (!heroRef.current) return;
@@ -82,10 +83,67 @@ export default function Home() {
           },
           "-=0.8"
         );
+
+      // Continuous 3D Floating Levitation Animation
+      gsap.to(".hero-3d-float", {
+        y: -16,
+        rotateZ: 1.5,
+        duration: 3,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.easeInOut",
+      });
+
+      gsap.to(".floating-accent-1", {
+        y: -12,
+        rotate: 6,
+        duration: 2.4,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.easeInOut",
+      });
+
+      gsap.to(".floating-accent-2", {
+        y: 14,
+        rotate: -8,
+        duration: 3.1,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.easeInOut",
+      });
     }, heroRef);
 
     return () => ctx.revert();
   }, []);
+
+  const handleMouseMove = (e) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    const rotateX = (-y / rect.height) * 22;
+    const rotateY = (x / rect.width) * 22;
+
+    gsap.to(card, {
+      rotateX: rotateX,
+      rotateY: rotateY,
+      duration: 0.5,
+      ease: "power2.out",
+      transformPerspective: 1000,
+    });
+  };
+
+  const handleMouseLeave = () => {
+    const card = cardRef.current;
+    if (!card) return;
+    gsap.to(card, {
+      rotateX: 0,
+      rotateY: 0,
+      duration: 0.8,
+      ease: "power2.out",
+    });
+  };
 
   return (
     <div className="min-h-screen pb-20 space-y-20 sm:space-y-28">
@@ -130,16 +188,44 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Right Hero Image Column */}
-          <div className="hero-img relative flex justify-center">
-            <Image
-              src="/hero.gif"
-              alt="hero-image"
-              width={700}
-              height={700}
-              className="w-full h-auto max-w-lg lg:max-w-full drop-shadow-[0_20px_50px_rgba(168,85,247,0.3)]"
-              priority
-            />
+          {/* Right Hero Image Column with 3D Motion */}
+          <div
+            className="hero-img relative flex justify-center items-center cursor-pointer select-none"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            style={{ perspective: "1000px" }}
+          >
+            <div ref={cardRef} className="hero-3d-float relative w-full max-w-lg flex justify-center items-center">
+              {/* Backlight pulsing glow */}
+              <div className="absolute -inset-6 bg-gradient-to-r from-purple-600/35 via-orange-500/25 to-pink-600/35 rounded-full blur-3xl animate-pulse pointer-events-none" />
+
+              {/* Main Animated / 3D Image */}
+              <Image
+                src="/hero.gif"
+                alt="3D Concert Event App"
+                width={700}
+                height={700}
+                className="w-full h-auto max-w-lg lg:max-w-full drop-shadow-[0_25px_60px_rgba(168,85,247,0.4)] relative z-10"
+                priority
+              />
+
+              {/* Dynamic Floating 3D Accents */}
+              <div className="floating-accent-1 absolute -top-4 -left-4 z-20 bg-zinc-900/85 backdrop-blur-md border border-purple-500/40 px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 pointer-events-none">
+                <span className="text-2xl animate-bounce">🔥</span>
+                <div>
+                  <p className="text-xs font-bold text-white tracking-wide">Live Concert</p>
+                  <p className="text-[10px] text-purple-400 font-medium">4K 3D Vibe</p>
+                </div>
+              </div>
+
+              <div className="floating-accent-2 absolute -bottom-4 -right-4 z-20 bg-zinc-900/85 backdrop-blur-md border border-orange-500/40 px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 pointer-events-none">
+                <span className="text-2xl animate-pulse">🎸</span>
+                <div>
+                  <p className="text-xs font-bold text-white tracking-wide">Blaze Live</p>
+                  <p className="text-[10px] text-orange-400 font-medium">Rock Festival</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
