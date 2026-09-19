@@ -36,20 +36,14 @@ export default function Home() {
         defaults: { ease: "power3.out" },
       });
 
-      tl.from(".hero-tag", {
-        opacity: 0,
-        y: 10,
-        duration: 0.6,
-      })
-        .from(
-          ".hero-title",
-          {
-            opacity: 0,
-            y: 40,
-            duration: 0.9,
-          },
-          "-=0.3"
-        )
+      tl.from(
+        ".hero-title",
+        {
+          opacity: 0,
+          y: 40,
+          duration: 0.9,
+        }
+      )
         .from(
           ".hero-desc",
           {
@@ -84,18 +78,18 @@ export default function Home() {
           "-=0.8"
         );
 
-      // Continuous 3D Floating Levitation Animation
+      // Continuous 3D Floating Levitation Animations
       gsap.to(".hero-3d-float", {
         y: -16,
-        rotateZ: 1.5,
-        duration: 3,
+        rotateZ: 1.2,
+        duration: 3.2,
         repeat: -1,
         yoyo: true,
         ease: "sine.easeInOut",
       });
 
       gsap.to(".floating-accent-1", {
-        y: -12,
+        y: -14,
         rotate: 6,
         duration: 2.4,
         repeat: -1,
@@ -104,8 +98,26 @@ export default function Home() {
       });
 
       gsap.to(".floating-accent-2", {
-        y: 14,
-        rotate: -8,
+        y: 12,
+        rotate: -6,
+        duration: 2.9,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.easeInOut",
+      });
+
+      gsap.to(".floating-accent-3", {
+        y: -10,
+        rotate: -5,
+        duration: 3.4,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.easeInOut",
+      });
+
+      gsap.to(".floating-accent-4", {
+        y: 15,
+        rotate: 7,
         duration: 3.1,
         repeat: -1,
         yoyo: true,
@@ -190,14 +202,15 @@ export default function Home() {
 
           {/* Right Hero Image Column with 3D Motion */}
           <div
-            className="hero-img relative flex justify-center items-center cursor-pointer select-none"
+            className="hero-img relative flex justify-center items-center cursor-pointer select-none py-6 sm:py-10 px-2 sm:px-4"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
             style={{ perspective: "1000px" }}
           >
             <div ref={cardRef} className="hero-3d-float relative w-full max-w-lg flex justify-center items-center">
               {/* Backlight pulsing glow */}
-              <div className="absolute -inset-6 bg-gradient-to-r from-purple-600/35 via-orange-500/25 to-pink-600/35 rounded-full blur-3xl animate-pulse pointer-events-none" />
+              <div className="absolute -inset-6 sm:-inset-8 bg-gradient-to-tr from-purple-600/35 via-orange-500/25 to-pink-600/35 rounded-full blur-2xl sm:blur-3xl animate-pulse pointer-events-none" />
+              <div className="absolute inset-0 rounded-full border border-purple-500/20 scale-105 sm:scale-110 animate-ping opacity-25 pointer-events-none" />
 
               {/* Main Animated / 3D Image */}
               <Image
@@ -205,24 +218,40 @@ export default function Home() {
                 alt="3D Concert Event App"
                 width={700}
                 height={700}
-                className="w-full h-auto max-w-lg lg:max-w-full drop-shadow-[0_25px_60px_rgba(168,85,247,0.4)] relative z-10"
+                className="w-full h-auto max-w-[280px] xs:max-w-[340px] sm:max-w-lg lg:max-w-full drop-shadow-[0_20px_45px_rgba(168,85,247,0.35)] relative z-10 transition-transform duration-300 hover:scale-[1.02]"
                 priority
               />
 
-              {/* Dynamic Floating 3D Accents */}
-              <div className="floating-accent-1 absolute -top-4 -left-4 z-20 bg-zinc-900/85 backdrop-blur-md border border-purple-500/40 px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 pointer-events-none">
-                <span className="text-2xl animate-bounce">🔥</span>
+              {/* Dynamic Floating 3D Micro-Badges (Mobile-Optimized) */}
+              <div className="floating-accent-1 absolute top-0 -left-1 sm:-top-6 sm:-left-4 z-20 bg-zinc-900/90 backdrop-blur-md border border-purple-500/40 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl shadow-2xl flex items-center gap-2 sm:gap-2.5 pointer-events-none scale-90 sm:scale-100">
+                <span className="text-base sm:text-xl animate-bounce">🔥</span>
                 <div>
-                  <p className="text-xs font-bold text-white tracking-wide">Live Concert</p>
-                  <p className="text-[10px] text-purple-400 font-medium">4K 3D Vibe</p>
+                  <p className="text-[11px] sm:text-xs font-bold text-white tracking-wide">Live Concert</p>
+                  <p className="text-[9px] sm:text-[10px] text-purple-400 font-medium">4K 3D Vibe</p>
                 </div>
               </div>
 
-              <div className="floating-accent-2 absolute -bottom-4 -right-4 z-20 bg-zinc-900/85 backdrop-blur-md border border-orange-500/40 px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 pointer-events-none">
-                <span className="text-2xl animate-pulse">🎸</span>
+              <div className="floating-accent-2 absolute top-0 -right-1 sm:-top-6 sm:-right-4 z-20 bg-zinc-900/90 backdrop-blur-md border border-cyan-500/40 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl shadow-2xl flex items-center gap-2 sm:gap-2.5 pointer-events-none scale-90 sm:scale-100">
+                <span className="text-base sm:text-xl animate-pulse">🎟️</span>
                 <div>
-                  <p className="text-xs font-bold text-white tracking-wide">Blaze Live</p>
-                  <p className="text-[10px] text-orange-400 font-medium">Rock Festival</p>
+                  <p className="text-[11px] sm:text-xs font-bold text-white tracking-wide">QR Tickets</p>
+                  <p className="text-[9px] sm:text-[10px] text-cyan-400 font-medium">Instant Access</p>
+                </div>
+              </div>
+
+              <div className="floating-accent-3 absolute bottom-0 -left-1 sm:-bottom-6 sm:-left-4 z-20 bg-zinc-900/90 backdrop-blur-md border border-orange-500/40 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl shadow-2xl flex items-center gap-2 sm:gap-2.5 pointer-events-none scale-90 sm:scale-100">
+                <span className="text-base sm:text-xl animate-pulse">⚡</span>
+                <div>
+                  <p className="text-[11px] sm:text-xs font-bold text-white tracking-wide">AI Copilot</p>
+                  <p className="text-[9px] sm:text-[10px] text-orange-400 font-medium">Auto-Generate</p>
+                </div>
+              </div>
+
+              <div className="floating-accent-4 absolute bottom-0 -right-1 sm:-bottom-6 sm:-right-4 z-20 bg-zinc-900/90 backdrop-blur-md border border-pink-500/40 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl shadow-2xl flex items-center gap-2 sm:gap-2.5 pointer-events-none scale-90 sm:scale-100">
+                <span className="text-base sm:text-xl animate-bounce">🎸</span>
+                <div>
+                  <p className="text-[11px] sm:text-xs font-bold text-white tracking-wide">Blaze Live</p>
+                  <p className="text-[9px] sm:text-[10px] text-pink-400 font-medium">San Francisco</p>
                 </div>
               </div>
             </div>
