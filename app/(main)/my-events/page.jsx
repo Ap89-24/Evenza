@@ -1,5 +1,6 @@
 "use client";
 import EventCard from '@/components/EventCard';
+import Pagination from '@/components/Pagination';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { api } from '@/convex/_generated/api';
@@ -12,6 +13,8 @@ import { toast } from 'sonner';
 
 import UpgradeModal from '@/components/UpgradeModal';
 import { Crown, Sparkles } from 'lucide-react';
+
+const MY_EVENTS_PAGE_SIZE = 9;
 
 const MyEventPage = () => {
 
@@ -26,6 +29,12 @@ const MyEventPage = () => {
     const isLimitReached = !isPro && eventsCount >= 1;
 
     const [tabFilter, setTabFilter] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const handleTabChange = (tab) => {
+      setTabFilter(tab);
+      setCurrentPage(1);
+    };
 
     const now = Date.now();
     const ownedEvents = events?.filter((e) => !e.isTeamEvent) || [];
@@ -43,6 +52,18 @@ const MyEventPage = () => {
         : tabFilter === "past"
         ? pastEvents
         : events || [];
+
+    const totalPages = Math.max(1, Math.ceil(displayedEvents.length / MY_EVENTS_PAGE_SIZE));
+    const safePage = Math.min(currentPage, totalPages);
+    const paginatedEvents = displayedEvents.slice(
+      (safePage - 1) * MY_EVENTS_PAGE_SIZE,
+      safePage * MY_EVENTS_PAGE_SIZE
+    );
+
+    const handlePageChange = (page) => {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
 
     const handleDeleteEvent = async (eventId) => {
     if (!window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
@@ -127,7 +148,7 @@ const MyEventPage = () => {
             <Button
               variant={tabFilter === "all" ? "default" : "ghost"}
               size="sm"
-              onClick={() => setTabFilter("all")}
+              onClick={() => handleTabChange("all")}
               className={`rounded-lg text-xs gap-1.5 shrink-0 ${
                 tabFilter === "all" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
               }`}
@@ -138,7 +159,7 @@ const MyEventPage = () => {
               <Button
                 variant={tabFilter === "team" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setTabFilter("team")}
+                onClick={() => handleTabChange("team")}
                 className={`rounded-lg text-xs gap-1.5 shrink-0 ${
                   tabFilter === "team" ? "bg-purple-600 text-white" : "text-purple-400 hover:text-white"
                 }`}
@@ -149,7 +170,7 @@ const MyEventPage = () => {
             <Button
               variant={tabFilter === "upcoming" ? "default" : "ghost"}
               size="sm"
-              onClick={() => setTabFilter("upcoming")}
+              onClick={() => handleTabChange("upcoming")}
               className={`rounded-lg text-xs gap-1.5 shrink-0 ${
                 tabFilter === "upcoming" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
               }`}
@@ -159,7 +180,7 @@ const MyEventPage = () => {
             <Button
               variant={tabFilter === "past" ? "default" : "ghost"}
               size="sm"
-              onClick={() => setTabFilter("past")}
+              onClick={() => handleTabChange("past")}
               className={`rounded-lg text-xs gap-1.5 shrink-0 ${
                 tabFilter === "past" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
               }`}
@@ -189,17 +210,26 @@ const MyEventPage = () => {
             </p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {displayedEvents.map((event) => (
-              <EventCard
-                key={event._id}
-                event={event}
-                action="event"
-                onClick={() => handleEventClick(event._id)}
-                onDelete={handleDeleteEvent}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {paginatedEvents.map((event) => (
+                <EventCard
+                  key={event._id}
+                  event={event}
+                  action="event"
+                  onClick={() => handleEventClick(event._id)}
+                  onDelete={handleDeleteEvent}
+                />
+              ))}
+            </div>
+            <Pagination
+              currentPage={safePage}
+              totalPages={totalPages}
+              totalItems={displayedEvents.length}
+              pageSize={MY_EVENTS_PAGE_SIZE}
+              onPageChange={handlePageChange}
+            />
+          </>
         )}
       </div>
 

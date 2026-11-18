@@ -7,6 +7,25 @@ import { query } from "./_generated/server";
 const isUpcoming = (e, now) => (e.endDate || e.startDate) >= now;
 const isPast = (e, now) => (e.endDate || e.startDate) < now;
 
+// Helper to paginate an array of events safely
+const paginateList = (items, page = 1, pageSize = 9) => {
+    const safePageSize = Math.max(1, Math.min(pageSize, 50));
+    const totalCount = items.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+    const safePage = Math.max(1, Math.min(page, totalPages));
+    const startIndex = (safePage - 1) * safePageSize;
+
+    return {
+        events: items.slice(startIndex, startIndex + safePageSize),
+        totalCount,
+        page: safePage,
+        pageSize: safePageSize,
+        totalPages,
+        hasNextPage: safePage < totalPages,
+        hasPrevPage: safePage > 1,
+    };
+};
+
 //Get featured events (combines recent and popular, upcoming only)...
 export const getFeaturedEvents = query({
     args: {
@@ -177,4 +196,106 @@ export const getPastEvents = query({
 
         return pastEventsList.slice(0, args.limit ?? 50);
     },
-}); 
+});
+
+// Paginated recent upcoming events
+export const getPaginatedRecentEvents = query({
+    args: {
+        page: v.optional(v.number()),
+        pageSize: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const now = Date.now();
+        const events = await ctx.db
+            .query("events")
+            .order("desc")
+            .collect();
+
+        const upcomingEvents = events.filter((e) => isUpcoming(e, now));
+        return paginateList(upcomingEvents, args.page ?? 1, args.pageSize ?? 6);
+    },
+});
+
+// Paginated upcoming events by category
+export const getPaginatedEventsByCategory = query({
+    args: {
+        category: v.string(),
+        page: v.optional(v.number()),
+        pageSize: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const now = Date.now();
+        const events = await ctx.db
+            .query("events")
+            .withIndex("by_category", (q) => q.eq("category", args.category))
+            .order("desc")
+            .collect();
+
+        const upcomingEvents = events.filter((e) => isUpcoming(e, now));
+        return paginateList(upcomingEvents, args.page ?? 1, args.pageSize ?? 9);
+    },
+});
+
+// Paginated upcoming events by location (city/state)
+export const getPaginatedEventsByLocation = query({
+    args: {
+        city: v.optional(v.string()),
+        state: v.optional(v.string()),
+        country: v.optional(v.string()),
+        page: v.optional(v.number()),
+        pageSize: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const now = Date.now();
+        const events = await ctx.db
+            .query("events")
+            .order("desc")
+            .collect();
+
+        const upcomingEvents = events.filter((e) => isUpcoming(e, now));
+
+        if (args.city) {
+            const cityEvents = upcomingEvents.filter(
+                (e) => e.city.toLowerCase() === args.city.toLowerCase()
+            );
+            if (cityEvents.length > 0) {
+                return paginateList(cityEvents, args.page ?? 1, args.pageSize ?? 9);
+            }
+        }
+
+        if (args.state) {
+            const stateEvents = upcomingEvents.filter(
+                (e) => e.state?.toLowerCase() === args.state.toLowerCase()
+            );
+            if (stateEvents.length > 0) {
+                return paginateList(stateEvents, args.page ?? 1, args.pageSize ?? 9);
+            }
+        }
+
+        return paginateList(upcomingEvents, args.page ?? 1, args.pageSize ?? 9);
+    },
+});
+
+// Paginated past / finished events
+export const getPaginatedPastEvents = query({
+    args: {
+        category: v.optional(v.string()),
+        page: v.optional(v.number()),
+        pageSize: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const now = Date.now();
+        const events = await ctx.db
+            .query("events")
+            .order("desc")
+            .collect();
+
+        let pastEventsList = events.filter((e) => isPast(e, now));
+
+        if (args.category && args.category !== "all") {
+            pastEventsList = pastEventsList.filter((e) => e.category === args.category);
+        }
+
+        return paginateList(pastEventsList, args.page ?? 1, args.pageSize ?? 9);
+    },
+});

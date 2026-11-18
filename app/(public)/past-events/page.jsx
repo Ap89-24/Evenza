@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { useConvexQuery } from "@/hooks/use-convex-query";
 import EventCard from "@/components/EventCard";
+import Pagination from "@/components/Pagination";
 import { CATEGORIES } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,14 +13,32 @@ import { History, Loader2, Sparkles, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+const PAST_EVENTS_PAGE_SIZE = 9;
+
 const PastEventsPage = () => {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const { data: pastEvents, isLoading } = useConvexQuery(
-    api.event.getPastEvents,
-    { category: selectedCategory }
+  const { data: pastEventsData, isLoading } = useConvexQuery(
+    api.event.getPaginatedPastEvents,
+    { category: selectedCategory, page: currentPage, pageSize: PAST_EVENTS_PAGE_SIZE }
   );
+
+  const pastEvents = pastEventsData?.events || [];
+  const totalCount = pastEventsData?.totalCount || 0;
+  const totalPages = pastEventsData?.totalPages || 1;
+  const activePage = pastEventsData?.page || currentPage;
+
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleEventClick = (slug) => {
     router.push(`/events/${slug}`);
@@ -70,7 +89,7 @@ const PastEventsPage = () => {
           <Button
             variant={selectedCategory === "all" ? "default" : "outline"}
             size="sm"
-            onClick={() => setSelectedCategory("all")}
+            onClick={() => handleCategoryChange("all")}
             className={`rounded-full text-xs shrink-0 snap-start transition-all ${
               selectedCategory === "all"
                 ? "bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-500/20"
@@ -85,7 +104,7 @@ const PastEventsPage = () => {
               key={cat.id}
               variant={selectedCategory === cat.id ? "default" : "outline"}
               size="sm"
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => handleCategoryChange(cat.id)}
               className={`rounded-full text-xs shrink-0 snap-start transition-all gap-1.5 ${
                 selectedCategory === cat.id
                   ? "bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-500/20"
@@ -109,7 +128,7 @@ const PastEventsPage = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
             <span>
-              Showing {pastEvents.length} finished event{pastEvents.length !== 1 ? "s" : ""}
+              Showing {totalCount} finished event{totalCount !== 1 ? "s" : ""}
             </span>
           </div>
 
@@ -125,6 +144,15 @@ const PastEventsPage = () => {
               </div>
             ))}
           </div>
+
+          <Pagination
+            currentPage={activePage}
+            totalPages={totalPages}
+            totalItems={totalCount}
+            pageSize={PAST_EVENTS_PAGE_SIZE}
+            itemLabel="finished events"
+            onPageChange={handlePageChange}
+          />
         </div>
       ) : (
         <Card className="p-8 sm:p-12 text-center border-zinc-800 bg-zinc-900/30">
@@ -140,7 +168,7 @@ const PastEventsPage = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSelectedCategory("all")}
+                onClick={() => handleCategoryChange("all")}
                 className="border-zinc-700 text-xs"
               >
                 Clear Category Filter

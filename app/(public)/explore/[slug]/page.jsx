@@ -1,18 +1,22 @@
 "use client"
 import EventCard from '@/components/EventCard';
+import Pagination from '@/components/Pagination';
 import { api } from '@/convex/_generated/api';
 import { useConvexQuery } from '@/hooks/use-convex-query';
 import { CATEGORIES } from '@/lib/data';
 import { parseLocationSlug } from '@/lib/location-util';
 import { Badge, Loader2, MapPin } from 'lucide-react';
 import { notFound, useParams, useRouter } from 'next/navigation'
-import React from 'react'
+import React, { useState } from 'react'
+
+const EVENTS_PER_PAGE = 9;
 
 const DynamicExplorePage = () => {
 
   const params = useParams();
   const router = useRouter();
   const slug = params.slug;
+  const [currentPage, setCurrentPage] = useState(1);
 
   //check if it is a valid category or not
   const categoryInfo = CATEGORIES.find((cat) => cat.id === slug);
@@ -26,16 +30,26 @@ const DynamicExplorePage = () => {
     notFound();
   }
 
-   const { data: events, isLoading } = useConvexQuery(
+   const { data: eventsData, isLoading } = useConvexQuery(
       isCategory
-      ? api.event.getEventsByCategory
-      : api.event.getEventsByLocation,
+      ? api.event.getPaginatedEventsByCategory
+      : api.event.getPaginatedEventsByLocation,
       isCategory
-      ? {category: slug , limit: 50}
+      ? { category: slug, page: currentPage, pageSize: EVENTS_PER_PAGE }
       : city && state
-      ? {city,state, limit: 50}
+      ? { city, state, page: currentPage, pageSize: EVENTS_PER_PAGE }
       : "skip"
     );
+
+    const events = eventsData?.events || [];
+    const totalCount = eventsData?.totalCount || 0;
+    const totalPages = eventsData?.totalPages || 1;
+    const activePage = eventsData?.page || currentPage;
+
+    const handlePageChange = (page) => {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
 
     const handleEventClick = (eventslug) => {
     router.push(`/events/${eventslug}`);
@@ -65,23 +79,32 @@ const DynamicExplorePage = () => {
 
         </div>
 
-        {events && events.length > 0 && (
+        {totalCount > 0 && (
           <p className='text-muted-foreground'>
-            {events.length} event{events.length !== 1 ? "s" : ""} found
+            {totalCount} event{totalCount !== 1 ? "s" : ""} found
           </p>
         )}
       </div>
 
         {events && events.length > 0  ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => (
-              <EventCard
-              key={event._id}
-              event={event}
-              onClick={() => handleEventClick(event.slug)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {events.map((event) => (
+                <EventCard
+                key={event._id}
+                event={event}
+                onClick={() => handleEventClick(event.slug)}
+                />
+              ))}
+            </div>
+            <Pagination
+              currentPage={activePage}
+              totalPages={totalPages}
+              totalItems={totalCount}
+              pageSize={EVENTS_PER_PAGE}
+              onPageChange={handlePageChange}
+            />
+          </>
         ) : (
           <p className='text-muted-foreground'>
               No event found in this category
@@ -112,24 +135,33 @@ const DynamicExplorePage = () => {
             {city}, {state}
           </Badge>
 
-        {events && events.length > 0 && (
+        {totalCount > 0 && (
           <p className='text-muted-foreground'>
-            {events.length} event{events.length !== 1 ? "s" : ""} found
+            {totalCount} event{totalCount !== 1 ? "s" : ""} found
           </p>
         )}
         </div>
       </div>
 
         {events && events.length > 0  ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => (
-              <EventCard
-              key={event._id}
-              event={event}
-              onClick={() => handleEventClick(event.slug)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {events.map((event) => (
+                <EventCard
+                key={event._id}
+                event={event}
+                onClick={() => handleEventClick(event.slug)}
+                />
+              ))}
+            </div>
+            <Pagination
+              currentPage={activePage}
+              totalPages={totalPages}
+              totalItems={totalCount}
+              pageSize={EVENTS_PER_PAGE}
+              onPageChange={handlePageChange}
+            />
+          </>
         ) : (
           <p className='text-muted-foreground'>
               No event found in this {city} , {state} yet

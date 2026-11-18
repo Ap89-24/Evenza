@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { useConvexQuery } from "@/hooks/use-convex-query";
 import {
@@ -19,14 +19,19 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { createLocationSlug } from "@/lib/location-util";
 import EventCard from "@/components/EventCard";
+import Pagination from "@/components/Pagination";
 import { CATEGORIES } from "@/lib/data";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect } from "react";
 import { gsap } from "gsap";
 
+const RECENT_EVENTS_PAGE_SIZE = 6;
+
 const ExplorePage = () => {
   //Fetch current user for location...
   const plugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
+  const recentSectionRef = useRef(null);
+  const [recentPage, setRecentPage] = useState(1);
 
   const router = useRouter();
   const containerRef = useRef(null);
@@ -53,10 +58,20 @@ const ExplorePage = () => {
     { limit: 6 },
   );
 
-  const { data: recentEvents, isLoading: recentLoading } = useConvexQuery(
-    api.event.getRecentEvents,
-    { limit: 12 },
+  const { data: recentEventsData, isLoading: recentLoading } = useConvexQuery(
+    api.event.getPaginatedRecentEvents,
+    { page: recentPage, pageSize: RECENT_EVENTS_PAGE_SIZE },
   );
+
+  const recentEvents = recentEventsData?.events || [];
+  const recentTotalCount = recentEventsData?.totalCount || 0;
+  const recentTotalPages = recentEventsData?.totalPages || 1;
+  const currentRecentPage = recentEventsData?.page || recentPage;
+
+  const handleRecentPageChange = (page) => {
+    setRecentPage(page);
+    recentSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const { data: categoryCounts } = useConvexQuery(api.event.getCategoryCount);
 
@@ -287,7 +302,7 @@ const ExplorePage = () => {
 
       {/* Recently Created Events Across All Organizers */}
       {recentEvents && recentEvents.length > 0 && (
-        <div className="mb-16">
+        <div ref={recentSectionRef} className="mb-16 scroll-mt-24">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-3xl font-bold mb-1">Recently Created Events</h2>
@@ -305,6 +320,14 @@ const ExplorePage = () => {
               />
             ))}
           </div>
+
+          <Pagination
+            currentPage={currentRecentPage}
+            totalPages={recentTotalPages}
+            totalItems={recentTotalCount}
+            pageSize={RECENT_EVENTS_PAGE_SIZE}
+            onPageChange={handleRecentPageChange}
+          />
         </div>
       )}
       {/* Banner linking to Past Events Archive */}
