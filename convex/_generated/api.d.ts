@@ -11,6 +11,7 @@
 import type * as dashboard from "../dashboard.js";
 import type * as event from "../event.js";
 import type * as events from "../events.js";
+import type * as payments from "../payments.js";
 import type * as registrations from "../registrations.js";
 import type * as search from "../search.js";
 import type * as seed from "../seed.js";
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   dashboard: typeof dashboard;
   event: typeof event;
   events: typeof events;
+  payments: typeof payments;
   registrations: typeof registrations;
   search: typeof search;
   seed: typeof seed;

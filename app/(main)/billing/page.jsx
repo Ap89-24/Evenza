@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Globe, Loader2, Plus, Sparkles, Trash2, Users, Zap } from "lucide-react";
+import { Check, Crown, Globe, Loader2, Plus, Receipt, Sparkles, Trash2, Users, Zap } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import UpgradeModal from "@/components/UpgradeModal";
 import ProFeatureLock from "@/components/ProFeatureLock";
@@ -20,6 +21,7 @@ export default function BillingPage() {
   const [customDomainInput, setCustomDomainInput] = useState("");
 
   const { data: currentUser, isLoading } = useConvexQuery(api.users.getCurrentUser);
+  const { data: payments } = useConvexQuery(api.payments.getMyPayments);
   const { mutate: updateSubscription } = useConvexMutation(api.users.updateSubscription);
   const { mutate: addTeamMember } = useConvexMutation(api.users.addTeamMember);
   const { mutate: removeTeamMember } = useConvexMutation(api.users.removeTeamMember);
@@ -276,6 +278,76 @@ export default function BillingPage() {
                   </div>
                 ))}
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Payment History Section */}
+        <Card className="border-zinc-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-purple-400" /> Payment History
+            </CardTitle>
+            <CardDescription>
+              Records of your billing plan payments and invoices.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            {!payments || payments.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground text-sm border border-dashed border-zinc-800 rounded-xl">
+                No billing payments recorded yet.
+              </div>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-gray-400">
+                    <th className="pb-3 font-semibold">Invoice</th>
+                    <th className="pb-3 font-semibold">Plan</th>
+                    <th className="pb-3 font-semibold">Method</th>
+                    <th className="pb-3 font-semibold">Date</th>
+                    <th className="pb-3 font-semibold">Amount</th>
+                    <th className="pb-3 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/50">
+                  {payments.map((payment) => (
+                    <tr key={payment._id}>
+                      <td className="py-3 font-mono text-xs text-gray-300">
+                        {payment.invoiceNumber || payment._id}
+                      </td>
+                      <td className="py-3 capitalize font-medium">
+                        {payment.plan} ({payment.billingCycle})
+                      </td>
+                      <td className="py-3 uppercase text-xs text-gray-400">
+                        {payment.paymentMethod || payment.paymentProvider || "—"}
+                      </td>
+                      <td className="py-3 text-gray-400">
+                        {format(payment.paidAt || payment.createdAt, "PPP")}
+                      </td>
+                      <td className="py-3 font-semibold">
+                        {payment.currency === "INR" ? "₹" : `${payment.currency} `}
+                        {payment.amount}
+                      </td>
+                      <td className="py-3">
+                        <Badge
+                          variant="outline"
+                          className={
+                            payment.status === "succeeded"
+                              ? "border-emerald-500/40 text-emerald-400 bg-emerald-950/30 capitalize"
+                              : payment.status === "pending"
+                              ? "border-amber-500/40 text-amber-400 bg-amber-950/30 capitalize"
+                              : payment.status === "refunded"
+                              ? "border-zinc-600 text-zinc-300 bg-zinc-900 capitalize"
+                              : "border-red-500/40 text-red-400 bg-red-950/30 capitalize"
+                          }
+                        >
+                          {payment.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </CardContent>
         </Card>

@@ -178,4 +178,52 @@ export default defineSchema({
     .index("by_organizer", ["organizerId"])
     .index("by_follower", ["followerUserId"])
     .index("by_organizer_follower", ["organizerId", "followerUserId"]),
+
+    // Billing Plan Payments Table
+    payments: defineTable({
+        // User reference
+        userId: v.id("users"),
+
+        // Billing plan & amount details
+        plan: v.union(v.literal("free"), v.literal("pro")),
+        billingCycle: v.union(v.literal("monthly"), v.literal("yearly")),
+        amount: v.number(),
+        currency: v.string(), // e.g., "INR", "USD"
+
+        // Payment status
+        status: v.union(
+            v.literal("pending"),
+            v.literal("succeeded"),
+            v.literal("failed"),
+            v.literal("refunded"),
+            v.literal("cancelled")
+        ),
+
+        // Payment gateway / provider metadata
+        paymentProvider: v.optional(v.string()), // e.g., "razorpay", "stripe", "manual"
+        paymentMethod: v.optional(v.string()),   // e.g., "card", "upi", "netbanking"
+        providerOrderId: v.optional(v.string()),
+        providerPaymentId: v.optional(v.string()),
+        providerSubscriptionId: v.optional(v.string()),
+        invoiceNumber: v.optional(v.string()),
+        receiptUrl: v.optional(v.string()),
+
+        // Billing period covered by this payment
+        billingPeriodStart: v.optional(v.number()),
+        billingPeriodEnd: v.optional(v.number()),
+
+        // Failure / refund tracking
+        failureReason: v.optional(v.string()),
+        refundedAt: v.optional(v.number()),
+
+        // Timestamps
+        paidAt: v.optional(v.number()),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    })
+    .index("by_user", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_user_status", ["userId", "status"])
+    .index("by_provider_order", ["providerOrderId"])
+    .index("by_provider_payment", ["providerPaymentId"]),
 })

@@ -13,23 +13,41 @@ import { Badge } from "./ui/badge";
 import { Check, Crown, Loader2, Sparkles, Zap } from "lucide-react";
 import { useConvexMutation, useConvexQuery } from "@/hooks/use-convex-query";
 import { api } from "@/convex/_generated/api";
+import { PLAN_PRICING } from "@/lib/entitlements";
 import { toast } from "sonner";
+
+const PAYMENT_METHODS = [
+  { id: "upi", label: "UPI" },
+  { id: "card", label: "Card" },
+  { id: "netbanking", label: "Netbanking" },
+];
 
 const UpgradeModal = ({ isOpen, onClose, trigger = "limit" }) => {
   const [upgrading, setUpgrading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("upi");
   const { data: currentUser } = useConvexQuery(api.users.getCurrentUser);
-  const { mutate: updateSubscription } = useConvexMutation(api.users.updateSubscription);
+  const { mutate: recordPlanPayment } = useConvexMutation(api.payments.recordPlanPayment);
 
   const isPro = currentUser?.plan === "pro";
 
   const handleUpgrade = async () => {
     try {
       setUpgrading(true);
-      await updateSubscription({
+      const result = await recordPlanPayment({
         plan: "pro",
-        subscriptionStatus: "active",
+        billingCycle: "monthly",
+        amount: PLAN_PRICING.PRO.priceAmount,
+        currency: "INR",
+        status: "succeeded",
+        paymentProvider: "manual",
+        paymentMethod,
       });
-      toast.success("Welcome to Pro! 🎉 All premium features are unlocked.");
+
+      if (!result?.success) {
+        return;
+      }
+
+      toast.success("Welcome to Pro! 🎉 Payment recorded and all premium features are unlocked.");
       if (onClose) onClose();
     } catch (error) {
       toast.error(error.message || "Upgrade failed. Please try again.");
@@ -188,21 +206,42 @@ const UpgradeModal = ({ isOpen, onClose, trigger = "limit" }) => {
                 ✓ You&apos;re on Pro
               </Button>
             ) : (
-              <Button
-                onClick={handleUpgrade}
-                disabled={upgrading}
-                className="w-full py-6 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white font-bold rounded-xl shadow-lg shadow-purple-500/25 transition-all duration-300"
-              >
-                {upgrading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Activating Pro...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5 mr-2" /> Upgrade to Pro — ₹1999/mo
-                  </>
-                )}
-              </Button>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-medium text-gray-400">Payment Method</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PAYMENT_METHODS.map((method) => (
+                      <button
+                        key={method.id}
+                        type="button"
+                        onClick={() => setPaymentMethod(method.id)}
+                        className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
+                          paymentMethod === method.id
+                            ? "border-purple-500 bg-purple-500/20 text-white"
+                            : "border-zinc-800 bg-zinc-900/80 text-gray-400 hover:text-white hover:border-zinc-700"
+                        }`}
+                      >
+                        {method.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <Button
+                  onClick={handleUpgrade}
+                  disabled={upgrading}
+                  className="w-full py-6 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white font-bold rounded-xl shadow-lg shadow-purple-500/25 transition-all duration-300"
+                >
+                  {upgrading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Processing Payment...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 mr-2" /> Upgrade to Pro — ₹1999/mo
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </div>
         </div>
