@@ -124,7 +124,24 @@ const EventCard = ({
                            </div>
                     </div>
 
-                    {action && (
+                    {action === "past-ticket" && onDelete && (
+                        <div className="flex gap-2 pt-2">
+                            <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(event._id);
+                            }}
+                            className="w-full cursor-pointer text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Delete Ticket
+                            </Button>
+                        </div>
+                    )}
+
+                    {action && action !== "past-ticket" && (
                         <div className="flex gap-2 pt-2">
                             <Button
                             variant="outline"
@@ -152,6 +169,7 @@ const EventCard = ({
                                 <Button
                                 variant="outline"
                                 size="sm"
+                                title={action === "event" ? "Delete Event" : "Delete Ticket"}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onDelete(event._id);

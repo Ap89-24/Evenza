@@ -64,6 +64,21 @@ const MyTicketsPage = () => {
     }
   };
 
+  const handleDeleteTicket = async (registrationId) => {
+    if (!window.confirm("Are you sure you want to delete this ticket?")) {
+      return;
+    }
+
+    try {
+      const result = await cancelRegistration({ registrationId });
+      if (result?.success) {
+        toast.success("Ticket deleted successfully");
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to delete ticket");
+    }
+  };
+
   return (
     <div className="min-h-screen pb-20 px-4">
       <div className="max-w-7xl mx-auto">
@@ -104,7 +119,8 @@ const MyTicketsPage = () => {
                 <EventCard
                   key={registration._id}
                   event={registration.event}
-                  action={""}
+                  action="past-ticket"
+                  onDelete={() => handleDeleteTicket(registration._id)}
                   className="cursor-default opacity-60"
                 />
               ))}
