@@ -9,6 +9,7 @@ import { Loader2, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react'
+import { useAuth } from '@clerk/nextjs';
 import { toast } from 'sonner';
 
 import UpgradeModal from '@/components/UpgradeModal';
@@ -19,9 +20,16 @@ const MY_EVENTS_PAGE_SIZE = 9;
 const MyEventPage = () => {
 
     const router = useRouter();
+    const { userId } = useAuth();
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-    const { data: currentUser } = useConvexQuery(api.users.getCurrentUser);
-    const { data: events, isLoading } = useConvexQuery(api.events.getEventsByOrg);
+    const { data: currentUser } = useConvexQuery(
+      api.users.getCurrentUser,
+      userId ? { clerkUserId: userId } : {}
+    );
+    const { data: events, isLoading } = useConvexQuery(
+      api.events.getEventsByOrg,
+      userId ? { clerkUserId: userId } : {}
+    );
     const { mutate: deleteEvent } = useConvexMutation(api.events.deleteEvent);
 
     const isPro = currentUser?.plan === "pro";
@@ -71,7 +79,7 @@ const MyEventPage = () => {
     }
 
     try {
-      await deleteEvent({ eventId });
+      await deleteEvent({ eventId, clerkUserId: userId });
       toast.success("Event deleted successfully");
     } catch (error) {
       toast.error(error.message || "Failed to delete event");

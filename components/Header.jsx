@@ -1,9 +1,8 @@
 "use client";
-import { SignInButton, useAuth, UserButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, SignInButton, useAuth, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import React, { useState } from 'react';
 import { Button } from './ui/button';
-import { Authenticated, Unauthenticated } from "convex/react";
 import { BarLoader } from "react-spinners";
 import { useStoreUserEffect } from '@/hooks/useStoreUserEffect';
 import { Building, CreditCard, Globe, History as HistoryIcon, Menu, Plus, Ticket, X } from 'lucide-react';
@@ -22,8 +21,11 @@ const Header = () => {
 
   const { showOnboarding, handleOnboardingComplete, handleOnboardingSkip } = useOnboarding();
 
-  const { data: currentUser } = useConvexQuery(api.users.getCurrentUser);
-  const { has } = useAuth();
+  const { has, userId } = useAuth();
+  const { data: currentUser } = useConvexQuery(
+    api.users.getCurrentUser,
+    userId ? { clerkUserId: userId } : {}
+  );
   const hasPro = currentUser?.plan === "pro" || has?.({ plan: "pro" });
 
   return (
@@ -50,7 +52,7 @@ const Header = () => {
               <Link href='/past-events'>Past Events</Link>
             </Button>
 
-            <Authenticated>
+            <SignedIn>
               <Button size='sm' asChild className='hidden sm:inline-flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs sm:text-sm px-2.5 sm:px-3 shadow-md shadow-purple-500/25 border-none'>
                 <Link href={'/create-event'} className="flex items-center gap-1.5 text-white">
                   <Plus className='w-4 h-4 text-white' />
@@ -84,13 +86,13 @@ const Header = () => {
                   </UserButton.MenuItems>
                 </UserButton>
               </div>
-            </Authenticated>
+            </SignedIn>
 
-            <Unauthenticated>
+            <SignedOut>
               <SignInButton mode='modal'>
                 <Button size='sm' className="text-xs sm:text-sm px-3">Sign In</Button>
               </SignInButton>
-            </Unauthenticated>
+            </SignedOut>
 
             {/* Mobile Hamburger Menu Toggle Button */}
             <Button
@@ -148,7 +150,7 @@ const Header = () => {
                 </Link>
               </Button>
 
-              <Authenticated>
+              <SignedIn>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -181,13 +183,13 @@ const Header = () => {
                     <Plus className="w-4 h-4 text-white" /> Create Event
                   </Link>
                 </Button>
-              </Authenticated>
+              </SignedIn>
 
-              <Unauthenticated>
+              <SignedOut>
                 <SignInButton mode="modal">
                   <Button size="sm" className="mt-2 w-full text-xs h-9">Sign In</Button>
                 </SignInButton>
-              </Unauthenticated>
+              </SignedOut>
             </div>
           </div>
         )}

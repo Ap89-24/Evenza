@@ -163,11 +163,53 @@ export default defineSchema({
         // Ticket tier reference if multiple tickets selected
         ticketTypeId: v.optional(v.string()),
         ticketTypeName: v.optional(v.string()),
+
+        // Offline Pay-at-Venue Fields (Zero Razorpay for Tickets)
+        ticketQuantity: v.optional(v.number()),
+        bookingStatus: v.optional(
+          v.union(
+            v.literal("reserved"),
+            v.literal("confirmed"),
+            v.literal("cancelled"),
+            v.literal("attended")
+          )
+        ),
+        paymentStatus: v.optional(
+          v.union(
+            v.literal("pay_at_venue"),
+            v.literal("paid_at_venue"),
+            v.literal("unpaid"),
+            v.literal("refunded")
+          )
+        ),
+        amountDue: v.optional(v.number()),
+        amountPaid: v.optional(v.number()),
+        paidAtVenueTime: v.optional(v.number()),
+        paymentMethodOffline: v.optional(
+          v.union(v.literal("cash"), v.literal("upi"), v.literal("other"))
+        ),
+        collectedByUserId: v.optional(v.id("users")),
+        collectedByName: v.optional(v.string()),
+        paymentNotes: v.optional(v.string()),
+        paymentHistory: v.optional(
+          v.array(
+            v.object({
+              status: v.string(),
+              timestamp: v.number(),
+              recordedBy: v.string(),
+              amount: v.optional(v.number()),
+              method: v.optional(v.string()),
+              note: v.optional(v.string()),
+            })
+          )
+        ),
     })
     .index("by_user", ["userId"])
     .index("by_event", ["eventId"])
     .index("by_event_user", ["eventId", "userId"])
-    .index("by_qrCode", ["qrCode"]),
+    .index("by_qrCode", ["qrCode"])
+    .index("by_payment_status", ["paymentStatus"])
+    .index("by_event_payment_status", ["eventId", "paymentStatus"]),
 
     // Organizer Followers Table
     organizerFollowers: defineTable({
@@ -201,6 +243,7 @@ export default defineSchema({
 
         // Payment gateway / provider metadata
         paymentProvider: v.optional(v.string()), // e.g., "razorpay", "stripe", "manual"
+        paymentType: v.optional(v.string()),     // e.g., "subscription_monthly"
         paymentMethod: v.optional(v.string()),   // e.g., "card", "upi", "netbanking"
         providerOrderId: v.optional(v.string()),
         providerPaymentId: v.optional(v.string()),
@@ -225,5 +268,47 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_user_status", ["userId", "status"])
     .index("by_provider_order", ["providerOrderId"])
-    .index("by_provider_payment", ["providerPaymentId"]),
+    .index("by_provider_payment", ["providerPaymentId"])
+    .index("by_provider_subscription", ["providerSubscriptionId"]),
+
+    // Evenza Pro Monthly Recurring Subscriptions Table
+    subscriptions: defineTable({
+        userId: v.id("users"),
+        clerkUserId: v.string(),
+        razorpaySubscriptionId: v.string(),
+        razorpayPlanId: v.string(),
+        razorpayCustomerId: v.optional(v.string()),
+        billingCycle: v.literal("monthly"), // ONLY monthly subscriptions permitted
+        status: v.union(
+            v.literal("created"),
+            v.literal("authenticated"),
+            v.literal("active"),
+            v.literal("pending"),
+            v.literal("halted"),
+            v.literal("cancelled"),
+            v.literal("completed"),
+            v.literal("expired")
+        ),
+        currentPeriodStart: v.optional(v.number()),
+        currentPeriodEnd: v.optional(v.number()),
+        cancelAtCycleEnd: v.boolean(),
+        endedAt: v.optional(v.number()),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    })
+    .index("by_user", ["userId"])
+    .index("by_clerk_user", ["clerkUserId"])
+    .index("by_subscription_id", ["razorpaySubscriptionId"])
+    .index("by_status", ["status"])
+    .index("by_user_status", ["userId", "status"]),
+
+    // Processed Webhooks Table for Idempotent Delivery
+    processedWebhooks: defineTable({
+        eventId: v.string(),
+        eventType: v.string(),
+        processedAt: v.number(),
+        status: v.string(),
+        summary: v.optional(v.string()),
+    })
+    .index("by_event_id", ["eventId"]),
 })

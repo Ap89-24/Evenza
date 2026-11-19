@@ -1,40 +1,39 @@
+"use client";
+
 import { useUser } from "@clerk/clerk-react";
-import { useConvexAuth } from "convex/react";
 import { useEffect, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
-//import { Id } from "../convex/_generated/dataModel";
 
 export function useStoreUserEffect() {
-  const { isLoading, isAuthenticated } = useConvexAuth();
-  const { user } = useUser();
-  console.log(user);
-  // When this state is set we know the server
-  // has stored the user.
-  const [userId, setUserId] = useState(null);
+  const { user, isLoaded } = useUser();
+  const [storedUserId, setStoredUserId] = useState(null);
   const storeUser = useMutation(api.users.store);
-  // Call the `storeUser` mutation function to store
-  // the current user in the `users` table and return the `Id` value.
+
   useEffect(() => {
-    // If the user is not logged in don't do anything
-    if (!isAuthenticated) {
+    if (!isLoaded || !user?.id) {
       return;
     }
-    // Store the user in the database.
-    // Recall that `storeUser` gets the user information via the `auth`
-    // object on the server. You don't need to pass anything manually here.
-    async function createUser() {
-      const id = await storeUser();
-      setUserId(id);
+
+    async function syncUser() {
+      try {
+        const id = await storeUser({
+          clerkUserId: user.id,
+          name: user.fullName || user.firstName || "Evenza User",
+          email: user.primaryEmailAddress?.emailAddress || "",
+          profileImageUrl: user.imageUrl || undefined,
+        });
+        setStoredUserId(id);
+      } catch (err) {
+        console.warn("Could not sync user to Convex:", err);
+      }
     }
-    createUser();
-    return () => setUserId(null);
-    // Make sure the effect reruns if the user logs in with
-    // a different identity
-  }, [isAuthenticated, storeUser, user?.id]);
-  // Combine the local state with the state from context
+
+    syncUser();
+  }, [isLoaded, user?.id, storeUser]);
+
   return {
-    isLoading: isLoading || (isAuthenticated && userId === null),
-    isAuthenticated: isAuthenticated && userId !== null,
+    isLoading: !isLoaded,
+    isAuthenticated: !!user?.id,
   };
 }

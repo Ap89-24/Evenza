@@ -1,38 +1,56 @@
 import { v } from "convex/values";
-import {  mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 export const store = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Called storeUser without authentication present");
+  args: {
+    clerkUserId: v.optional(v.string()),
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    profileImageUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let identity = await ctx.auth.getUserIdentity();
+    let tokenIdentifier = identity?.tokenIdentifier;
+
+    if (!tokenIdentifier && args.clerkUserId) {
+      tokenIdentifier = `https://quiet-walleye-29.clerk.accounts.dev|${args.clerkUserId}`;
     }
 
-    // Check if we've already stored this identity before.
-    // Note: If you don't want to define an index right away, you can use
-    // ctx.db.query("users")
-    //  .filter(q => q.eq(q.field("tokenIdentifier"), identity.tokenIdentifier))
-    //  .unique();
-    const user = await ctx.db
+    if (!tokenIdentifier) {
+      return null;
+    }
+
+    let user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier),
+        q.eq("tokenIdentifier", tokenIdentifier),
       )
       .unique();
+
+    if (!user && args.clerkUserId) {
+      const allUsers = await ctx.db.query("users").collect();
+      user = allUsers.find(
+        (u) =>
+          u.tokenIdentifier.endsWith(args.clerkUserId) ||
+          u.tokenIdentifier === args.clerkUserId
+      ) || null;
+    }
+
+    const name = identity?.name ?? args.name ?? "Anonymous";
+    const email = identity?.email ?? args.email ?? "";
+    const profileImageUrl = identity?.pictureUrl ?? args.profileImageUrl;
+
     if (user !== null) {
-      // If we've seen this identity before but the name has changed, patch the value.
-       // If we've seen this identity before but details changed, update them
       const updates = {};
-      if (user.name !== identity.name) {
-        updates.name = identity.name ?? "Anonymous";
+      if (user.name !== name && name !== "Anonymous") {
+        updates.name = name;
       }
-      if (user.email !== identity.email) {
-        updates.email = identity.email ?? "";
+      if (user.email !== email && email !== "") {
+        updates.email = email;
       }
-      if (user.profileImageUrl !== identity.profileImageUrl) {
-        updates.profileImageUrl = identity.profileImageUrl;
+      if (user.profileImageUrl !== profileImageUrl && profileImageUrl) {
+        updates.profileImageUrl = profileImageUrl;
       }
 
       if (Object.keys(updates).length > 0) {
@@ -40,15 +58,14 @@ export const store = mutation({
         await ctx.db.patch(user._id, updates);
       }
 
-
       return user._id;
     }
-    // If it's a new identity, create a new `User`.
+
     return await ctx.db.insert("users", {
-      name: identity.name ?? "Anonymous",
-      tokenIdentifier: identity.tokenIdentifier,
-      email: identity.email ?? "",
-      profileImageUrl: identity.pictureUrl,
+      name,
+      tokenIdentifier,
+      email,
+      profileImageUrl,
       hasCompletedOnboarding: false,
       freeEventsCreated: 0,
       plan: "free",
@@ -59,28 +76,66 @@ export const store = mutation({
   },
 });
 
-
-//Check if user is logged in and return user data
+// Check if user is logged in and return user data (supports Clerk user ID fallback)
 export const getCurrentUser = query({
-  handler: async(ctx) =>{
+  args: { clerkUserId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if(!identity){
-      return null;
+    if (identity) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_token", (q) =>
+          q.eq("tokenIdentifier", identity.tokenIdentifier)
+        )
+        .unique();
+
+      if (user) return user;
     }
 
-   const user = await ctx.db
-     .query("users")
-     .withIndex("by_token" , (q) =>
-       q.eq("tokenIdentifier" , identity.tokenIdentifier)
-    )
-    .unique();
-
-    if(!user){
-      return null;
+    if (args?.clerkUserId) {
+      const users = await ctx.db.query("users").collect();
+      const user = users.find(
+        (u) =>
+          u.tokenIdentifier.endsWith(args.clerkUserId) ||
+          u.tokenIdentifier === args.clerkUserId
+      );
+      if (user) return user;
     }
-    return user;
+
+    return null;
   },
-})
+});
+
+// Auto-provision or update dev user when Clerk authentication is in development
+export const storeOrUpdateDevUser = internalMutation({
+  args: {
+    clerkUserId: v.string(),
+    email: v.optional(v.string()),
+    name: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const users = await ctx.db.query("users").collect();
+    const existing = users.find(
+      (u) =>
+        u.tokenIdentifier.endsWith(args.clerkUserId) ||
+        u.tokenIdentifier === args.clerkUserId
+    );
+    if (existing) return existing._id;
+
+    return await ctx.db.insert("users", {
+      name: args.name || "Evenza User",
+      tokenIdentifier: `https://quiet-walleye-29.clerk.accounts.dev|${args.clerkUserId}`,
+      email: args.email || "",
+      profileImageUrl: undefined,
+      hasCompletedOnboarding: true,
+      freeEventsCreated: 0,
+      plan: "free",
+      subscriptionStatus: "active",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
 
 
 export const completeOnboarding = mutation({
@@ -133,6 +188,18 @@ export const updateSubscription = mutation({
     });
 
     return { success: true, plan: args.plan };
+  },
+});
+
+// Immediately downgrade user to Free plan upon cancellation
+export const downgradeToFreePlan = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      plan: "free",
+      subscriptionStatus: "cancelled",
+      updatedAt: Date.now(),
+    });
   },
 });
 

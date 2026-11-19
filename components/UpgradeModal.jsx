@@ -11,47 +11,111 @@ import {
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Check, Crown, Loader2, Sparkles, Zap } from "lucide-react";
-import { useConvexMutation, useConvexQuery } from "@/hooks/use-convex-query";
+import { useConvexQuery } from "@/hooks/use-convex-query";
+import { useAction } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
-import { PLAN_PRICING } from "@/lib/entitlements";
+import { loadRazorpayCheckoutScript } from "@/lib/razorpay";
 import { toast } from "sonner";
-
-const PAYMENT_METHODS = [
-  { id: "upi", label: "UPI" },
-  { id: "card", label: "Card" },
-  { id: "netbanking", label: "Netbanking" },
-];
 
 const UpgradeModal = ({ isOpen, onClose, trigger = "limit" }) => {
   const [upgrading, setUpgrading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("upi");
-  const { data: currentUser } = useConvexQuery(api.users.getCurrentUser);
-  const { mutate: recordPlanPayment } = useConvexMutation(api.payments.recordPlanPayment);
+  const { user } = useUser();
+  const { data: currentUser } = useConvexQuery(
+    api.users.getCurrentUser,
+    user?.id ? { clerkUserId: user.id } : {}
+  );
+  const createSubscriptionAction = useAction(api.payments.subscriptions.createProSubscription);
+  const verifyPaymentAction = useAction(api.payments.verification.verifySubscriptionPayment);
 
   const isPro = currentUser?.plan === "pro";
 
   const handleUpgrade = async () => {
     try {
       setUpgrading(true);
-      const result = await recordPlanPayment({
-        plan: "pro",
-        billingCycle: "monthly",
-        amount: PLAN_PRICING.PRO.priceAmount,
-        currency: "INR",
-        status: "succeeded",
-        paymentProvider: "manual",
-        paymentMethod,
-      });
 
-      if (!result?.success) {
+      // 1. Ensure Razorpay Checkout SDK is loaded
+      const scriptLoaded = await loadRazorpayCheckoutScript();
+      if (!scriptLoaded) {
+        toast.error("Unable to load Razorpay Checkout SDK. Please check your internet connection.");
+        setUpgrading(false);
         return;
       }
 
-      toast.success("Welcome to Pro! 🎉 Payment recorded and all premium features are unlocked.");
-      if (onClose) onClose();
+      // 2. Create monthly subscription via secure Convex Node action
+      toast.loading("Setting up your monthly subscription...", { id: "razorpay-init" });
+      const checkoutData = await createSubscriptionAction({
+        clerkUserId: user?.id,
+        userEmail: user?.primaryEmailAddress?.emailAddress,
+        userName: user?.fullName || user?.firstName || "Evenza User",
+      });
+      toast.dismiss("razorpay-init");
+
+      if (!checkoutData || !checkoutData.subscriptionId) {
+        throw new Error("Unable to initialize subscription with Razorpay.");
+      }
+
+      // 3. Open real Razorpay Checkout modal for recurring subscription
+      const options = {
+        key: checkoutData.keyId,
+        subscription_id: checkoutData.subscriptionId,
+        name: "Evenza Pro",
+        description: "Evenza Pro Monthly Recurring Subscription",
+        image: "/evenza-icon.png",
+        prefill: {
+          name: checkoutData.userName || currentUser?.name || user?.fullName || "",
+          email: checkoutData.userEmail || currentUser?.email || user?.primaryEmailAddress?.emailAddress || "",
+        },
+        theme: {
+          color: "#9333ea",
+        },
+        handler: async function (response) {
+          try {
+            toast.loading("Verifying payment authorization...", { id: "razorpay-verify" });
+
+            // 4. Server-Side HMAC SHA256 Signature Verification
+            const verifyResult = await verifyPaymentAction({
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySubscriptionId: response.razorpay_subscription_id,
+              razorpaySignature: response.razorpay_signature,
+              clerkUserId: user?.id,
+            });
+
+            toast.dismiss("razorpay-verify");
+
+            if (verifyResult?.success) {
+              toast.success("Welcome to Evenza Pro! 🎉 All subscription benefits are now unlocked.");
+              if (onClose) onClose();
+            } else {
+              toast.error("Payment verification could not be confirmed. Our webhooks will sync your status shortly.");
+            }
+          } catch (verifyErr) {
+            toast.dismiss("razorpay-verify");
+            toast.error(verifyErr.message || "Payment verification failed.");
+          } finally {
+            setUpgrading(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setUpgrading(false);
+            toast.info("Subscription checkout was cancelled.");
+          },
+        },
+      };
+
+      const razorpayInstance = new window.Razorpay(options);
+      razorpayInstance.on("payment.failed", function (failResponse) {
+        setUpgrading(false);
+        toast.error(
+          failResponse.error?.description || "Subscription authorization failed. Please try another payment method."
+        );
+      });
+
+      razorpayInstance.open();
     } catch (error) {
-      toast.error(error.message || "Upgrade failed. Please try again.");
-    } finally {
+      toast.dismiss("razorpay-init");
+      toast.error(error.message || "Could not start checkout. Please try again.");
       setUpgrading(false);
     }
   };
@@ -207,33 +271,23 @@ const UpgradeModal = ({ isOpen, onClose, trigger = "limit" }) => {
               </Button>
             ) : (
               <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-medium text-gray-400">Payment Method</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {PAYMENT_METHODS.map((method) => (
-                      <button
-                        key={method.id}
-                        type="button"
-                        onClick={() => setPaymentMethod(method.id)}
-                        className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
-                          paymentMethod === method.id
-                            ? "border-purple-500 bg-purple-500/20 text-white"
-                            : "border-zinc-800 bg-zinc-900/80 text-gray-400 hover:text-white hover:border-zinc-700"
-                        }`}
-                      >
-                        {method.label}
-                      </button>
-                    ))}
-                  </div>
+                <div className="p-2.5 rounded-xl border border-purple-500/20 bg-purple-950/20 text-center">
+                  <p className="text-[11px] text-purple-300 font-medium">
+                    ⚡ Secure monthly recurring subscription powered by Razorpay
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    Supports UPI Autopay, Cards, and NetBanking • Cancel anytime
+                  </p>
                 </div>
+
                 <Button
                   onClick={handleUpgrade}
                   disabled={upgrading}
-                  className="w-full py-6 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white font-bold rounded-xl shadow-lg shadow-purple-500/25 transition-all duration-300"
+                  className="w-full py-6 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white font-bold rounded-xl shadow-lg shadow-purple-500/25 transition-all duration-300 cursor-pointer"
                 >
                   {upgrading ? (
                     <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Processing Payment...
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Setting up Razorpay...
                     </>
                   ) : (
                     <>

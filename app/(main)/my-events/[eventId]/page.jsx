@@ -41,6 +41,7 @@ import { api } from "@/convex/_generated/api";
 import { useConvexQuery } from "@/hooks/use-convex-query";
 import { getCategoryIcon, getCategoryLabel } from "@/lib/data";
 import { toast } from "sonner";
+import { useAuth } from "@clerk/nextjs";
 import AttendeeCard from "./_components/AttendeeCard";
 import QRScannerModel from "./_components/QRScannerModel";
 import UpgradeModal from "@/components/UpgradeModal";
@@ -89,16 +90,23 @@ const EventDashboard = () => {
   // Analytics Report Modal state
   const [showAnalyticsReportModal, setShowAnalyticsReportModal] = useState(false);
 
-  const { data: currentUser } = useConvexQuery(api.users.getCurrentUser);
+  const { userId } = useAuth();
+  const { data: currentUser } = useConvexQuery(
+    api.users.getCurrentUser,
+    userId ? { clerkUserId: userId } : {}
+  );
   const isPro = currentUser?.plan === "pro";
 
   const { data: DashboardData, isLoading } = useConvexQuery(
     api.dashboard.getEventDashboard,
-    { eventId }
+    { eventId, ...(userId ? { clerkUserId: userId } : {}) }
   );
 
   const { data: registrations, isLoading: registrationsLoading } =
-    useConvexQuery(api.registrations.getEventRegistrations, { eventId });
+    useConvexQuery(api.registrations.getEventRegistrations, {
+      eventId,
+      ...(userId ? { clerkUserId: userId } : {}),
+    });
 
   if (isLoading || registrationsLoading) {
     return (
@@ -128,6 +136,14 @@ const EventDashboard = () => {
     if (attendeeTab === "all") return matchesSearch && reg.status === "registered";
     if (attendeeTab === "checked-in") return matchesSearch && reg.checkedIn && reg.status === "registered";
     if (attendeeTab === "pending") return matchesSearch && !reg.checkedIn && reg.status === "registered";
+    if (attendeeTab === "paid-at-venue")
+      return matchesSearch && reg.paymentStatus === "paid_at_venue" && reg.status === "registered";
+    if (attendeeTab === "unpaid")
+      return (
+        matchesSearch &&
+        (reg.paymentStatus === "pay_at_venue" || reg.paymentStatus === "unpaid") &&
+        reg.status === "registered"
+      );
     return matchesSearch;
   });
 
@@ -138,13 +154,28 @@ const EventDashboard = () => {
     }
 
     const csvContent = [
-      ["Name", "Email", "Registered At", "Checked In", "Checked In At", "QR Code"],
+      [
+        "Name",
+        "Email",
+        "Registered At",
+        "Checked In",
+        "Checked In At",
+        "Payment Status",
+        "Amount Due (INR)",
+        "Amount Paid (INR)",
+        "Payment Method",
+        "QR Code",
+      ],
       ...registrations.map((reg) => [
-        reg.attendeeName,
-        reg.attendeeEmail,
+        `"${reg.attendeeName.replace(/"/g, '""')}"`,
+        `"${reg.attendeeEmail.replace(/"/g, '""')}"`,
         new Date(reg.registeredAt).toLocaleString(),
         reg.checkedIn ? "Yes" : "No",
         reg.checkedInAt ? new Date(reg.checkedInAt).toLocaleString() : "-",
+        reg.paymentStatus || "pay_at_venue",
+        reg.amountDue || 0,
+        reg.amountPaid || 0,
+        reg.paymentMethodOffline || "offline",
         reg.qrCode,
       ]),
     ]
@@ -426,10 +457,20 @@ const EventDashboard = () => {
           <TabsContent value="overview" className="space-y-4">
             <Tabs value={attendeeTab} onValueChange={setAttendeeTab}>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-                <TabsList className="bg-zinc-900/60">
-                  <TabsTrigger value="all">All ({stats.totalRegistrations})</TabsTrigger>
-                  <TabsTrigger value="checked-in">Checked In ({stats.checkedInCount})</TabsTrigger>
-                  <TabsTrigger value="pending">Pending ({stats.pendingCount})</TabsTrigger>
+                <TabsList className="bg-zinc-900/60 flex flex-wrap h-auto p-1 gap-1">
+                  <TabsTrigger value="all" className="text-xs">All ({stats.totalRegistrations})</TabsTrigger>
+                  <TabsTrigger value="checked-in" className="text-xs">Checked In ({stats.checkedInCount})</TabsTrigger>
+                  <TabsTrigger value="pending" className="text-xs">Pending ({stats.pendingCount})</TabsTrigger>
+                  {event.ticketType === "paid" && (
+                    <>
+                      <TabsTrigger value="paid-at-venue" className="text-xs text-emerald-400">
+                        Paid at Venue ({stats.paidAtVenueCount || 0})
+                      </TabsTrigger>
+                      <TabsTrigger value="unpaid" className="text-xs text-amber-400">
+                        Unpaid / Due ({stats.unpaidCount || 0})
+                      </TabsTrigger>
+                    </>
+                  )}
                 </TabsList>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -812,7 +853,7 @@ const EventDashboard = () => {
                       Your event is currently <strong>{Math.round((stats.totalRegistrations / stats.capacity) * 100)}% full</strong> with {Math.max(0, stats.capacity - stats.totalRegistrations)} seats remaining.
                     </p>
                     <span className="text-[10px] text-purple-400 font-mono block">
-                      💡 Tip: Share an urgency post ("Only {Math.max(0, stats.capacity - stats.totalRegistrations)} seats left!") on WhatsApp.
+                      💡 Tip: Share an urgency post (&quot;Only {Math.max(0, stats.capacity - stats.totalRegistrations)} seats left!&quot;) on WhatsApp.
                     </span>
                   </div>
 
@@ -874,6 +915,9 @@ const EventDashboard = () => {
         <QRScannerModel
           isOpen={showQrScanner}
           onClose={() => setShowQrScanner(false)}
+          eventId={eventId}
+          eventTitle={event.title}
+          userId={userId}
         />
       )}
 

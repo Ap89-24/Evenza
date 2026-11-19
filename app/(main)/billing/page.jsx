@@ -2,29 +2,44 @@
 
 import React, { useState } from "react";
 import { useConvexMutation, useConvexQuery } from "@/hooks/use-convex-query";
+import { useAction } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Globe, Loader2, Plus, Receipt, Sparkles, Trash2, Users, Zap } from "lucide-react";
+import { Check, Crown, Globe, Loader2, Plus, Receipt, RefreshCw, Sparkles, Trash2, Users, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import UpgradeModal from "@/components/UpgradeModal";
 import ProFeatureLock from "@/components/ProFeatureLock";
 
 export default function BillingPage() {
+  const { user } = useUser();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberName, setNewMemberName] = useState("");
   const [addingMember, setAddingMember] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [customDomainInput, setCustomDomainInput] = useState("");
 
-  const { data: currentUser, isLoading } = useConvexQuery(api.users.getCurrentUser);
-  const { data: payments } = useConvexQuery(api.payments.getMyPayments);
+  const { data: currentUser, isLoading } = useConvexQuery(
+    api.users.getCurrentUser,
+    user?.id ? { clerkUserId: user.id } : {}
+  );
+  const { data: activeSubscription } = useConvexQuery(
+    api.payments.mutations.getUserActiveSubscription,
+    user?.id ? { clerkUserId: user.id } : {}
+  );
+  const { data: billingHistory } = useConvexQuery(
+    api.payments.mutations.getUserBillingHistory,
+    user?.id ? { clerkUserId: user.id } : {}
+  );
   const { mutate: updateSubscription } = useConvexMutation(api.users.updateSubscription);
   const { mutate: addTeamMember } = useConvexMutation(api.users.addTeamMember);
   const { mutate: removeTeamMember } = useConvexMutation(api.users.removeTeamMember);
+  const cancelSubscriptionAction = useAction(api.payments.subscriptions.cancelProSubscription);
 
   if (isLoading) {
     return (
@@ -70,17 +85,25 @@ export default function BillingPage() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!window.confirm("Are you sure you want to downgrade to Free? You will lose Pro access at the end of the billing period.")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to cancel your Evenza Pro subscription? Your subscription will be cancelled immediately and your account will return to the Free plan."
+      )
+    ) {
       return;
     }
     try {
-      await updateSubscription({
-        plan: "free",
-        subscriptionStatus: "cancelled",
+      setCancelling(true);
+      const result = await cancelSubscriptionAction({
+        razorpaySubscriptionId: activeSubscription?.razorpaySubscriptionId,
+        cancelImmediately: true,
+        clerkUserId: user?.id,
       });
-      toast.success("Subscription updated to Free plan");
+      toast.success(result.message || "Your subscription has been cancelled immediately.");
     } catch (error) {
       toast.error(error.message || "Failed to cancel subscription");
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -97,8 +120,8 @@ export default function BillingPage() {
         {/* Current Plan Overview Card */}
         <Card className="border-purple-500/30 bg-gradient-to-r from-zinc-900 via-zinc-950 to-purple-950/20">
           <CardContent className="p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Badge
                   className={
                     isPro
@@ -110,7 +133,18 @@ export default function BillingPage() {
                   {isPro ? "PRO PLAN" : "FREE PLAN"}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
-                  Status: <strong className="text-emerald-400">Active</strong>
+                  Status:{" "}
+                  <strong
+                    className={
+                      isPro && currentUser?.subscriptionStatus === "active"
+                        ? "text-emerald-400"
+                        : "text-zinc-400"
+                    }
+                  >
+                    {isPro && currentUser?.subscriptionStatus === "active"
+                      ? "Active"
+                      : "Standard"}
+                  </strong>
                 </span>
               </div>
               <h2 className="text-3xl font-extrabold text-white">
@@ -121,13 +155,22 @@ export default function BillingPage() {
                   ? "Unlimited events, 1,000 attendees/event, AI Event Copilot & Full Marketing AI enabled."
                   : "Includes 1 event limit and up to 50 attendees per event."}
               </p>
+
+              {isPro && activeSubscription && (
+                <div className="pt-2 text-xs text-zinc-400 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono">
+                  <span>Subscription ID: <span className="text-zinc-300">{activeSubscription.razorpaySubscriptionId}</span></span>
+                  {activeSubscription.currentPeriodEnd && (
+                    <span>Renews: <span className="text-zinc-300">{format(activeSubscription.currentPeriodEnd, "PP")}</span></span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               {!isPro ? (
                 <Button
                   onClick={() => setShowUpgradeModal(true)}
-                  className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white font-bold py-6 px-8 rounded-xl shadow-lg shadow-purple-500/25"
+                  className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white font-bold py-6 px-8 rounded-xl shadow-lg shadow-purple-500/25 cursor-pointer"
                 >
                   <Sparkles className="w-5 h-5 mr-2" /> Upgrade to Pro — ₹1999/mo
                 </Button>
@@ -135,9 +178,16 @@ export default function BillingPage() {
                 <Button
                   variant="outline"
                   onClick={handleCancelSubscription}
-                  className="border-zinc-700 text-gray-300 hover:text-white"
+                  disabled={cancelling}
+                  className="border-red-900/40 text-red-400 hover:bg-red-950/30 hover:text-red-300 cursor-pointer"
                 >
-                  Downgrade to Free
+                  {cancelling ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Cancelling...
+                    </>
+                  ) : (
+                    "Cancel Subscription"
+                  )}
                 </Button>
               )}
             </div>
@@ -293,7 +343,7 @@ export default function BillingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto">
-            {!payments || payments.length === 0 ? (
+            {!billingHistory || billingHistory.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground text-sm border border-dashed border-zinc-800 rounded-xl">
                 No billing payments recorded yet.
               </div>
@@ -301,7 +351,7 @@ export default function BillingPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-zinc-800 text-gray-400">
-                    <th className="pb-3 font-semibold">Invoice</th>
+                    <th className="pb-3 font-semibold">Payment / Ref ID</th>
                     <th className="pb-3 font-semibold">Plan</th>
                     <th className="pb-3 font-semibold">Method</th>
                     <th className="pb-3 font-semibold">Date</th>
@@ -310,10 +360,10 @@ export default function BillingPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/50">
-                  {payments.map((payment) => (
+                  {billingHistory.map((payment) => (
                     <tr key={payment._id}>
                       <td className="py-3 font-mono text-xs text-gray-300">
-                        {payment.invoiceNumber || payment._id}
+                        {payment.providerPaymentId || payment.invoiceNumber || payment._id}
                       </td>
                       <td className="py-3 capitalize font-medium">
                         {payment.plan} ({payment.billingCycle})
@@ -335,10 +385,10 @@ export default function BillingPage() {
                             payment.status === "succeeded"
                               ? "border-emerald-500/40 text-emerald-400 bg-emerald-950/30 capitalize"
                               : payment.status === "pending"
-                              ? "border-amber-500/40 text-amber-400 bg-amber-950/30 capitalize"
-                              : payment.status === "refunded"
-                              ? "border-zinc-600 text-zinc-300 bg-zinc-900 capitalize"
-                              : "border-red-500/40 text-red-400 bg-red-950/30 capitalize"
+                                ? "border-amber-500/40 text-amber-400 bg-amber-950/30 capitalize"
+                                : payment.status === "refunded"
+                                  ? "border-zinc-600 text-zinc-300 bg-zinc-900 capitalize"
+                                  : "border-red-500/40 text-red-400 bg-red-950/30 capitalize"
                           }
                         >
                           {payment.status}

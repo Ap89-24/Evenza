@@ -11,7 +11,12 @@
 import type * as dashboard from "../dashboard.js";
 import type * as event from "../event.js";
 import type * as events from "../events.js";
+import type * as http from "../http.js";
 import type * as payments from "../payments.js";
+import type * as payments_mutations from "../payments/mutations.js";
+import type * as payments_subscriptions from "../payments/subscriptions.js";
+import type * as payments_verification from "../payments/verification.js";
+import type * as payments_webhooks from "../payments/webhooks.js";
 import type * as registrations from "../registrations.js";
 import type * as search from "../search.js";
 import type * as seed from "../seed.js";
@@ -27,7 +32,12 @@ declare const fullApi: ApiFromModules<{
   dashboard: typeof dashboard;
   event: typeof event;
   events: typeof events;
+  http: typeof http;
   payments: typeof payments;
+  "payments/mutations": typeof payments_mutations;
+  "payments/subscriptions": typeof payments_subscriptions;
+  "payments/verification": typeof payments_verification;
+  "payments/webhooks": typeof payments_webhooks;
   registrations: typeof registrations;
   search: typeof search;
   seed: typeof seed;

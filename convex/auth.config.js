@@ -1,17 +1,24 @@
+// convex/auth.config.js
 import { AuthConfig } from "convex/server";
 
-const config =  {
+const config = {
   providers: [
+    ...(process.env.CLERK_JWT_ISSUER_DOMAIN
+      ? [{ domain: process.env.CLERK_JWT_ISSUER_DOMAIN, applicationID: "convex" }]
+      : []),
     {
-      // Replace with your own Clerk Issuer URL from your "convex" JWT template
-      // or with `process.env.CLERK_JWT_ISSUER_DOMAIN`
-      // and configure CLERK_JWT_ISSUER_DOMAIN on the Convex Dashboard
-      // See https://docs.convex.dev/auth/clerk#configuring-dev-and-prod-instances
-      domain: process.env.CLERK_JWT_ISSUER_DOMAIN,
+      domain: "https://clerk.evenzza.in",
       applicationID: "convex",
     },
-  ]
-} 
+    {
+      domain: "https://charming-mite-30.clerk.accounts.dev",
+      applicationID: "convex",
+    },
+    {
+      domain: "https://quiet-walleye-29.clerk.accounts.dev",
+      applicationID: "convex",
+    },
+  ],
+};
 
-
-export default config
+export default config;

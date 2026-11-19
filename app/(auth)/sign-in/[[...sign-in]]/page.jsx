@@ -1,9 +1,23 @@
-"use client"
-import { SignIn } from '@clerk/nextjs'
-import React from 'react'
+"use client";
+import { SignIn, useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import React, { useEffect } from "react";
 
 const SignInPage = () => {
-  return   <SignIn />
-}
+  const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
 
-export default SignInPage
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.replace("/");
+    }
+  }, [isLoaded, isSignedIn, router]);
+
+  if (!isLoaded || isSignedIn) {
+    return null;
+  }
+
+  return <SignIn />;
+};
+
+export default SignInPage;

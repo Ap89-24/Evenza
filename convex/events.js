@@ -51,13 +51,40 @@ export const createEvent = mutation({
           })
         ),
         customDomain: v.optional(v.string()),
+        clerkUserId: v.optional(v.string()),
     },
 
     handler: async (ctx , args) => {
         try {
-            const user = await ctx.runQuery(internal.users.getCurrentUser);
+            let user = null;
+            const identity = await ctx.auth.getUserIdentity();
+            if (identity) {
+                user = await ctx.db
+                    .query("users")
+                    .withIndex("by_token", (q) =>
+                        q.eq("tokenIdentifier", identity.tokenIdentifier)
+                    )
+                    .unique();
+            }
+
+            if (!user && args.clerkUserId) {
+                const users = await ctx.db.query("users").collect();
+                user = users.find(
+                    (u) =>
+                        u.tokenIdentifier.endsWith(args.clerkUserId) ||
+                        u.tokenIdentifier === args.clerkUserId
+                );
+            }
+
+            if (!user && args.clerkUserId) {
+                const newUserId = await ctx.runMutation(internal.users.storeOrUpdateDevUser, {
+                    clerkUserId: args.clerkUserId,
+                });
+                user = await ctx.db.get(newUserId);
+            }
+
             if (!user) {
-                throw new Error("Authentication required to create an event");
+                throw new Error("Authentication required to create an event. Please sign in.");
             }
 
             const isPro = user.plan === "pro";
@@ -104,8 +131,10 @@ export const createEvent = mutation({
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/(^-|-$)/g, "");
 
+            const { clerkUserId, ...eventPayload } = args;
+
             const eventId = await ctx.db.insert("events" , {
-                ...args,
+                ...eventPayload,
                 capacity: !isPro ? Math.min(args.capacity, 50) : Math.min(args.capacity, 1000),
                 themeColor: !isPro ? "#1e3a8a" : args.themeColor || "#1e3a8a",
                 slug: `${slug}-${Date.now()}`,
@@ -147,8 +176,26 @@ export const getEventBySlug = query({
 
 //Get events by organizer or team membership...
 export const getEventsByOrg = query({
-    handler: async(ctx) => {
-        const user = await ctx.runQuery(internal.users.getCurrentUser);
+    args: { clerkUserId: v.optional(v.string()) },
+    handler: async(ctx, args) => {
+        let user = null;
+        const identity = await ctx.auth.getUserIdentity();
+        if (identity) {
+            user = await ctx.db
+                .query("users")
+                .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+                .unique();
+        }
+
+        if (!user && args?.clerkUserId) {
+            const users = await ctx.db.query("users").collect();
+            user = users.find(
+                (u) =>
+                    u.tokenIdentifier.endsWith(args.clerkUserId) ||
+                    u.tokenIdentifier === args.clerkUserId
+            );
+        }
+
         if (!user) return [];
 
         const ownedEvents = await ctx.db
@@ -182,9 +229,32 @@ export const getEventsByOrg = query({
 
 //Delete event....
 export const deleteEvent = mutation({
-    args: {eventId: v.id("events")},
-    handler: async (ctx,args) => {
-       const user = await ctx.runQuery(internal.users.getCurrentUser);
+    args: {
+        eventId: v.id("events"),
+        clerkUserId: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+       let user = null;
+       const identity = await ctx.auth.getUserIdentity();
+       if (identity) {
+           user = await ctx.db
+               .query("users")
+               .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+               .unique();
+       }
+
+       if (!user && args.clerkUserId) {
+           const users = await ctx.db.query("users").collect();
+           user = users.find(
+               (u) =>
+                   u.tokenIdentifier.endsWith(args.clerkUserId) ||
+                   u.tokenIdentifier === args.clerkUserId
+           );
+       }
+
+       if (!user) {
+           throw new Error("Authentication required to delete this event.");
+       }
        
        const event = await ctx.db.get(args.eventId);
        if(!event){

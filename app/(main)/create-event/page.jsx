@@ -73,8 +73,11 @@ const CreateEvent = () => {
   const [upgradeReason, setUpgradeReason] = useState("limit"); //limit or color......
 
   //check if user has a pro plan or not....
-  const { has } = useAuth();
-  const { data: currentUser } = useConvexQuery(api.users.getCurrentUser);
+  const { has, userId } = useAuth();
+  const { data: currentUser } = useConvexQuery(
+    api.users.getCurrentUser,
+    userId ? { clerkUserId: userId } : {}
+  );
   const hasPro = currentUser?.plan === "pro" || has?.({ plan: "pro" });
 
   const [ticketTiers, setTicketTiers] = useState([
@@ -250,6 +253,7 @@ const CreateEvent = () => {
         tickets: hasPro && ticketTiers.length > 1 ? ticketTiers : undefined,
         coverImage: data.coverImage || undefined,
         themeColor: !hasPro ? "#1e3a8a" : data.themeColor,
+        clerkUserId: userId,
       });
 
       toast.success("Your event is live! 🎉");

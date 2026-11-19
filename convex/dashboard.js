@@ -3,9 +3,29 @@ import { query } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 export const getEventDashboard = query({
-  args: { eventId: v.id("events") },
+  args: {
+    eventId: v.id("events"),
+    clerkUserId: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(internal.users.getCurrentUser);
+    let user = null;
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+        .unique();
+    }
+
+    if (!user && args.clerkUserId) {
+      const users = await ctx.db.query("users").collect();
+      user = users.find(
+        (u) =>
+          u.tokenIdentifier.endsWith(args.clerkUserId) ||
+          u.tokenIdentifier === args.clerkUserId
+      );
+    }
+
     if (!user) {
       return null;
     }
@@ -44,9 +64,24 @@ export const getEventDashboard = query({
 
     const pendingCount = totalRegistrations - checkedInCount;
 
-    //! Calculate the revenue of paid events....
+    //! Calculate the offline revenue collected at venue....
     let totalRevenue = 0;
-    if (event.ticketType === "paid" && event.ticketPrice) {
+    let paidAtVenueCount = 0;
+    let unpaidCount = 0;
+
+    registrations.forEach((reg) => {
+      if (reg.status === "registered") {
+        if (reg.paymentStatus === "paid_at_venue") {
+          paidAtVenueCount++;
+          totalRevenue += (reg.amountPaid || reg.amountDue || event.ticketPrice || 0);
+        } else if (reg.paymentStatus === "pay_at_venue" || reg.paymentStatus === "unpaid") {
+          unpaidCount++;
+        }
+      }
+    });
+
+    if (totalRevenue === 0 && event.ticketType === "paid" && event.ticketPrice) {
+      // Fallback for legacy events
       totalRevenue = checkedInCount * event.ticketPrice;
     }
 
@@ -75,6 +110,8 @@ export const getEventDashboard = query({
         totalRegistrations,
         checkedInCount,
         pendingCount,
+        paidAtVenueCount,
+        unpaidCount,
         capacity: event.capacity,
         checkedInRate,
         totalRevenue,
